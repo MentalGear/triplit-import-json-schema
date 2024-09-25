@@ -469,7 +469,7 @@ describe('Essential Tests', () => {
           type: 'object',
           properties: {
             pet: {
-              $ref: '#/definitions/Pet',
+              $ref: '#',
             },
           },
         },
@@ -484,6 +484,64 @@ describe('Essential Tests', () => {
       "'$ref' are not supported by Triplit - please remove them from your JSON data"
     );
   });
+
+  test('wrong JSON Schema format should throw error', () => {
+    //
+    const jsonSchemaComprensiveTest = {
+      title: 'Comprehensive Test Schema',
+      description:
+        'A schema to test various features of JSON Schema validation',
+      type: 'object',
+      properties: {
+        referencesTest: {
+          type: 'noneExisting',
+          properties: {
+            pet: {},
+          },
+        },
+      },
+    };
+
+    expect(() => {
+      const output = triplitJsonFromJsonSchema(
+        jsonSchemaComprensiveTest as JSONSchema7
+      );
+    }).toThrowError(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'data/properties/referencesTest/type must be equal to one of the allowed values'
+        ),
+      })
+    );
+  });
+
+  // test('JSON validaton: wrong $ref should throw error', () => {
+  //   //
+  //   const jsonSchemaComprensiveTest = {
+  //     title: 'Comprehensive Test Schema',
+  //     description:
+  //       'A schema to test various features of JSON Schema validation',
+  //     type: 'object',
+  //     properties: {
+  //       referencesTest: {
+  //         type: 'object',
+  //         properties: {
+  //           pet: {
+  //             $ref: '#/definitions/Pet',
+  //           },
+  //         },
+  //       },
+  //     },
+  //   };
+
+  //   expect(() => {
+  //     const output = triplitJsonFromJsonSchema(
+  //       jsonSchemaComprensiveTest as JSONSchema7
+  //     );
+  //   }).toThrowError(
+  //     "'$ref' are not supported by Triplit - please remove them from your JSON data"
+  //   );
+  // });
 
   test('JSON Schema test object should not throw', () => {
     //
