@@ -34,28 +34,30 @@ export function triplitJsonFromJsonSchema(
   //   You can check the omitted constraints in the 'omittedConstraints' return field.`
   // );
 
-  validateTriplitSchema(collections);
-
-  return {
+  const triplitJsonSchema = {
     collections,
     version: 0,
   };
+
+  validateTriplitSchema(triplitJsonSchema);
+
+  return triplitJsonSchema;
 }
 
-function validateTriplitSchema(collectionsToValidate: Record<string, any>) {
+function validateTriplitSchema(triplitJsonSchema: {
+  collections: Record<string, any>;
+  version: number;
+}) {
   // as recommended by triplit team member
   // to validate, try converting into a triplit JS Object
   try {
-    JSONToSchema({
-      collections: collectionsToValidate,
-      version: 0,
-    });
+    JSONToSchema(triplitJsonSchema);
   } catch (err) {
     const customError: Error & { details?: any } = new Error(
       'Triplit couldnt parse your transformed data. Catch this error and check the details object. Maybe there are objects that are empty or without type',
       { cause: err }
     );
-    customError.details = { transformedData: collectionsToValidate };
+    customError.details = { transformedData: triplitJsonSchema?.collections };
     throw customError;
   }
 }
