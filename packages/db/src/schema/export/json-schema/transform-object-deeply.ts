@@ -9,8 +9,8 @@ export function transformObjectDeeply(
   if (typeof object !== 'object') return;
 
   // NOTE: we cant iterate over all keys and apply transformations
-  // since this will miss keys with transforms that mutate keys (eg omitRelationship deltes keys)
-  // instead, we must one transform after another to the whole object
+  // since this will miss keys with transforms that mutate keys (eg omitRelationship deletes keys)
+  // instead, we must transform one after another
   transformFunction.apply(null, [object, overlyingObj, currentObjKey]);
 
   if (object) {
