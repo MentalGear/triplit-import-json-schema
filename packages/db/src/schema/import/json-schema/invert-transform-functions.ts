@@ -38,6 +38,7 @@ function checkJsonDataCompatibility(result: any) {
   result = checkCombinations(result);
   result = checkArray(result);
   result = checkRef(result);
+  result = checkConditionals(result);
 
   return result;
 }
@@ -51,7 +52,6 @@ function omitConstraints(
   result = checkNumberConstraints(result);
   result = checkArrayConstraints(result);
   result = checkObjectConstraints(result);
-  result = checkConditionals(result);
 
   return result;
 }
@@ -128,13 +128,20 @@ export function checkConst(object: any): any {
   return object;
 }
 
-// ========================================================================
-// Constraints deletion
-// constraints are simply removed since we assume they are enforced by
-// application logic using the jsonSchema in a validator
-// ========================================================================
+export function checkCombinations(object: any): any {
+  if (
+    (object.allOf && Array.isArray(object.allOf)) ||
+    (object.anyOf && Array.isArray(object.anyOf)) ||
+    (object.oneOf && Array.isArray(object.oneOf)) ||
+    (object.not && Array.isArray(object.not))
+  ) {
+    throw new Error(
+      "Combinations like 'allOf / anyOf / oneOf / not' are not supported by Triplit - please remove them from your JSON data"
+    );
+  }
 
-type omittedConstraints = { name: string; object: string; desc: string }[];
+  return object;
+}
 
 export function checkRef(object: any): any {
   if (object.$ref) {
@@ -145,6 +152,14 @@ export function checkRef(object: any): any {
 
   return object;
 }
+
+// ========================================================================
+// Constraints deletion
+// constraints are simply removed since we assume they are enforced by
+// application logic using the jsonSchema in a validator
+// ========================================================================
+
+type omittedConstraints = { name: string; object: string; desc: string }[];
 
 function omitProperties(
   object: any,
@@ -165,7 +180,8 @@ function omitProperties(
     ${propertiesToDelete.join(', ')}
     in
     ${JSON.stringify(object)}
-    \n ${desc}`
+    \n ${desc} are not enforcable by Triplit's database schema.
+    Fix: Parse the generated validationSchema in front of any database write to ensure compliance.`
   );
   // console.warn(
   //   `Constraints/Validation rules that are not natively supported on Triplit's db schema have been omited.
@@ -188,7 +204,7 @@ export function checkStringConstraints(object: any): any {
     omitProperties(
       object,
       ['maxLength', 'minLength', 'pattern'],
-      'JSON string constraints (" 6.3. Validation Keywords for Strings ") are not supported by Triplit - please remove them from your JSON data'
+      'JSON string constraints (" 6.3. Validation Keywords for Strings ")'
     );
   }
   return object;
@@ -217,7 +233,7 @@ export function checkNumberConstraints(object: any): any {
         'minimum',
         'exclusiveMinimum',
       ],
-      'JSON number constraints ("6.2. Validation Keywords for Numeric Instances (number and integer)") are not supported by Triplit - please remove them from your JSON data'
+      'JSON number constraints ("6.2. Validation Keywords for Numeric Instances (number and integer)")'
     );
   }
   return object;
@@ -238,7 +254,7 @@ export function checkArrayConstraints(object: any): any {
     omitProperties(
       object,
       ['maxItems', 'minItems', 'contains', 'maxContains'],
-      'JSON array constraints ("6.4. Validation Keywords for Arrays") are not supported by Triplit - please remove them from your JSON data'
+      'JSON array constraints ("6.4. Validation Keywords for Arrays")'
     );
   }
 
@@ -262,7 +278,7 @@ export function checkObjectConstraints(object: any): any {
         'dependentRequired',
         'dependentSchemas',
       ],
-      'JSON object constraints ("6.5. Validation Keywords for Objects") are not supported by Triplit - please remove them from your JSON data'
+      'JSON object constraints ("6.5. Validation Keywords for Objects")'
     );
     // throw new Error(
     //   'JSON object constraints ("6.5. Validation Keywords for Objects") are not supported by Triplit - please remove them from your JSON data'
@@ -275,22 +291,14 @@ export function checkPropPatternsAndDependencies(object: any): any {
   if (object.type !== 'object') return object;
 
   if (object.patternProperties) {
-    omitProperties(
-      object,
-      ['patternProperties'],
-      "'patternProperties' are not supported by Triplit - please remove them from your JSON data"
-    );
+    omitProperties(object, ['patternProperties'], "'patternProperties'");
     // throw new Error(
     //   "'patternProperties' are not supported by Triplit - please remove them from your JSON data"
     // );
   }
 
   if (object.dependencies) {
-    omitProperties(
-      object,
-      ['dependencies'],
-      "'dependencies' are not supported by Triplit - please remove them from your JSON data"
-    );
+    omitProperties(object, ['dependencies'], "'dependencies'");
   }
 
   return object;
@@ -305,27 +313,12 @@ export function checkConditionals(object: any): any {
     omitProperties(
       object,
       ['if', 'then', 'else'],
-      "Conditionals like 'if / then / else' are not supported by Triplit - please remove them from your JSON data"
+      "Conditionals like 'if / then / else'"
     );
 
     // throw new Error(
     //   "Conditionals like 'if / then / else' are not supported by Triplit - please remove them from your JSON data"
     // );
-  }
-
-  return object;
-}
-
-export function checkCombinations(object: any): any {
-  if (
-    (object.allOf && Array.isArray(object.allOf)) ||
-    (object.anyOf && Array.isArray(object.anyOf)) ||
-    (object.oneOf && Array.isArray(object.oneOf)) ||
-    (object.not && Array.isArray(object.not))
-  ) {
-    throw new Error(
-      "Combinations like 'allOf / anyOf / oneOf / not' are not supported by Triplit - please remove them from your JSON data"
-    );
   }
 
   return object;
