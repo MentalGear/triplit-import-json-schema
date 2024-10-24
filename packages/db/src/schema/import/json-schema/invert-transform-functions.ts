@@ -146,7 +146,7 @@ export function checkCombinations(object: any): any {
 export function checkRef(object: any): any {
   if (object.$ref) {
     throw new Error(
-      "'$ref' are not supported by Triplit - please remove them from your JSON data"
+      "'$ref' are not supported by Triplit - please de-ref your JSON. Check if the used validationLibAdapter's jsonSchema function de-refs all data to inline data."
     );
   }
 
