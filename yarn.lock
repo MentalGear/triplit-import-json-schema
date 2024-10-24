@@ -9890,11 +9890,13 @@ __metadata:
     "@triplit/tuple-database": "npm:2.2.25"
     "@triplit/types": "workspace:^"
     "@types/json-schema": "npm:^7.0.15"
+    "@valibot/to-json-schema": "npm:^0.2.0"
     "@vitest/coverage-c8": "npm:^0.29.2"
     "@vitest/coverage-v8": "npm:^0.33.0"
     "@vitest/ui": "npm:^0.33.0"
     ajv: "npm:^8.17.1"
     ajv-formats: "npm:^3.0.1"
+    deepmerge-ts: "npm:^7.1.3"
     fast-check: "npm:^3.16.0"
     idb: "npm:^7.1.1"
     nanoid: "npm:^3.0.0"
@@ -9903,7 +9905,10 @@ __metadata:
     rxjs: "npm:^7.8.1"
     tinybench: "npm:^2.5.0"
     typescript: "npm:^5.2.2"
+    valibot: "npm:^0.42.1"
     vitest: "npm:^1.3.1"
+    zod: "npm:^3.23.8"
+    zod-to-json-schema: "npm:^3.23.3"
   languageName: unknown
   linkType: soft
 
@@ -11769,6 +11774,15 @@ __metadata:
   version: 1.2.0
   resolution: "@ungap/structured-clone@npm:1.2.0"
   checksum: 10/c6fe89a505e513a7592e1438280db1c075764793a2397877ff1351721fe8792a966a5359769e30242b3cd023f2efb9e63ca2ca88019d73b564488cc20e3eab12
+  languageName: node
+  linkType: hard
+
+"@valibot/to-json-schema@npm:^0.2.0":
+  version: 0.2.0
+  resolution: "@valibot/to-json-schema@npm:0.2.0"
+  peerDependencies:
+    valibot: ">=0.31.0 <1"
+  checksum: 10/e0cbb3303d5abc3540e3ffb3bbe0be0ae42a52488025e9bd48a726a584e9a9bc8163ac33110384cb740b59ed729ce97ec0589d45106c80edfd396040363ea1c5
   languageName: node
   linkType: hard
 
@@ -15797,6 +15811,13 @@ __metadata:
   version: 0.1.4
   resolution: "deep-is@npm:0.1.4"
   checksum: 10/ec12d074aef5ae5e81fa470b9317c313142c9e8e2afe3f8efa124db309720db96d1d222b82b84c834e5f87e7a614b44a4684b6683583118b87c833b3be40d4d8
+  languageName: node
+  linkType: hard
+
+"deepmerge-ts@npm:^7.1.3":
+  version: 7.1.3
+  resolution: "deepmerge-ts@npm:7.1.3"
+  checksum: 10/255388a44be0b8f32516fe7f4dd13a3ff6be60ddecaf4458bce1734e5c36d79042387e022d7b6bed69ddf6f42494210e317c477cd83e83681473c1ff4bda5fd0
   languageName: node
   linkType: hard
 
@@ -31360,6 +31381,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"valibot@npm:^0.42.1":
+  version: 0.42.1
+  resolution: "valibot@npm:0.42.1"
+  peerDependencies:
+    typescript: ">=5"
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  checksum: 10/3e6213d03fa1d9141566a7f9c8e24a783837f7e5216fe92658d29b6abc41a65c266ed5114f7002b9585ddb67f617505bd21b61639c8614a1457d584ef028a117
+  languageName: node
+  linkType: hard
+
 "validate-npm-package-license@npm:^3.0.1, validate-npm-package-license@npm:^3.0.4":
   version: 3.0.4
   resolution: "validate-npm-package-license@npm:3.0.4"
@@ -33185,6 +33218,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"zod-to-json-schema@npm:^3.23.3":
+  version: 3.23.3
+  resolution: "zod-to-json-schema@npm:3.23.3"
+  peerDependencies:
+    zod: ^3.23.3
+  checksum: 10/09f783a2325606b88ecd17f8753f47d945e9e1290a0d81a68484f677ff16151c126b07419ee61720ddec4f10ad0c08688569d265feefb709d60c2164f055b87d
+  languageName: node
+  linkType: hard
+
 "zod@npm:3.21.4":
   version: 3.21.4
   resolution: "zod@npm:3.21.4"
@@ -33196,6 +33238,13 @@ __metadata:
   version: 3.22.4
   resolution: "zod@npm:3.22.4"
   checksum: 10/73622ca36a916f785cf528fe612a884b3e0f183dbe6b33365a7d0fc92abdbedf7804c5e2bd8df0a278e1472106d46674281397a3dd800fa9031dc3429758c6ac
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.23.8":
+  version: 3.23.8
+  resolution: "zod@npm:3.23.8"
+  checksum: 10/846fd73e1af0def79c19d510ea9e4a795544a67d5b34b7e1c4d0425bf6bfd1c719446d94cdfa1721c1987d891321d61f779e8236fde517dc0e524aa851a6eff1
   languageName: node
   linkType: hard
 
