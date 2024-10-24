@@ -1,6 +1,10 @@
 export function transformObjectDeeply(
   object: any,
-  transformFunction: Function,
+  transformFunction: (
+    object: any,
+    overlyingObj: { [key: string]: any },
+    currentObjKey: string
+  ) => any,
   overlyingObj = {},
   currentObjKey = ''
 ) {
