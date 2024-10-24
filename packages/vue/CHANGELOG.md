@@ -1,5 +1,75 @@
 # @triplit/vue
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [761648cf]
+  - @triplit/client@0.5.1
+
+## 0.2.0
+
+### Minor Changes
+
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+- Updated dependencies [38746526]
+- Updated dependencies [abe8bea8]
+  - @triplit/client@0.5.0
+
+## 0.1.36
+
+### Patch Changes
+
+- Updated dependencies [3c7fd004]
+  - @triplit/client@0.4.13
+
+## 0.1.35
+
+### Patch Changes
+
+- @triplit/client@0.4.12
+
+## 0.1.34
+
+### Patch Changes
+
+- @triplit/client@0.4.11
+
+## 0.1.33
+
+### Patch Changes
+
+- @triplit/client@0.4.10
+
+## 0.1.32
+
+### Patch Changes
+
+- Updated dependencies [a902f8b8]
+  - @triplit/client@0.4.9
+
+## 0.1.31
+
+### Patch Changes
+
+- Updated dependencies [7ea2a0a9]
+  - @triplit/client@0.4.8
+
+## 0.1.30
+
+### Patch Changes
+
+- 51114dc7: Update vue types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 0.1.29
 
 ### Patch Changes

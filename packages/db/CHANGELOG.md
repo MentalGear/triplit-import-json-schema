@@ -1,5 +1,66 @@
 # @triplit/db
 
+## 0.4.1
+
+### Patch Changes
+
+- 8966b0fe: Fixup deduplication bug in candidate selection
+- 761648cf: Add TypeFromModel type
+
+## 0.4.0
+
+### Minor Changes
+
+- 0a09013b: Sunset migrations API
+- f894e435: update query return type to array
+- abe8bea8: Sunset entityId() in builder
+
+### Patch Changes
+
+- 38746526: Update clear to rewrite data to keep back to original stores only
+
+## 0.3.75
+
+### Patch Changes
+
+- 5fed7f42: export schema builder types
+
+## 0.3.74
+
+### Patch Changes
+
+- 5eae93dc: update exports
+
+## 0.3.73
+
+### Patch Changes
+
+- 99a5b854: Properly cleanup onClear listener data in clock
+
+## 0.3.72
+
+### Patch Changes
+
+- Updated dependencies [7a48f517]
+  - @triplit/tuple-database@2.2.27
+
+## 0.3.71
+
+### Patch Changes
+
+- 4f99c558: Use iterators when clearing data, use underlying storage.clear(), reset state on clear
+- a902f8b8: unify session variable transformation logic
+- Updated dependencies [6e426627]
+  - @triplit/tuple-database@2.2.26
+
+## 0.3.70
+
+### Patch Changes
+
+- 104027d8: update types to use less conditionals, fix typecheck
+- 833b69c9: export more helpers
+- ecc5a959: Store query componenets and intermediate results during execution
+
 ## 0.3.69
 
 ### Patch Changes

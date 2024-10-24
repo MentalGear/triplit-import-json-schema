@@ -1,6 +1,5 @@
 import {
   DB,
-  Migration,
   UpdateTypeFromModel,
   CollectionNameFromModels,
   DBTransaction,
@@ -26,6 +25,8 @@ import {
   FetchResultEntity,
   CollectionQueryDefault,
   FetchResultEntityFromParts,
+  StoreSchema,
+  ClearOptions,
 } from '@triplit/db';
 import { decodeToken } from '../token.js';
 import {
@@ -150,7 +151,7 @@ type ClientTransactOptions = Pick<
   'manualSchemaRefresh' | 'skipRules'
 >;
 
-export interface ClientOptions<M extends ClientSchema | undefined> {
+export interface ClientOptions<M extends ClientSchema = ClientSchema> {
   /**
    * The schema used to validate database operations and provide type-hinting. Read more about schemas {@link https://www.triplit.dev/docs/schemas | here }
    */
@@ -168,10 +169,6 @@ export interface ClientOptions<M extends ClientSchema | undefined> {
    * The URL of the server to connect to. If not provided, the client will not connect to a server.
    */
   serverUrl?: string;
-  /**
-   * @deprecated use `schema` instead
-   */
-  migrations?: Migration[];
   syncSchema?: boolean;
   transport?: SyncTransport;
   /**
@@ -215,7 +212,7 @@ const DEFAULT_FETCH_OPTIONS = {
   policy: 'local-first',
 } as const;
 
-export class TriplitClient<M extends ClientSchema | undefined = undefined> {
+export class TriplitClient<M extends ClientSchema = ClientSchema> {
   db: DB<M>;
 
   /**
@@ -224,10 +221,6 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
 
-  /**
-   * @deprecated use `http` instead
-   */
-  remote: HttpClient<M>;
   http: HttpClient<M>;
 
   private defaultFetchOptions: {
@@ -251,7 +244,6 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       serverUrl,
       syncSchema,
       transport,
-      migrations,
       clientId,
       variables,
       storage,
@@ -277,12 +269,6 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     this.db = new DB<M>({
       clock,
       schema: dbSchema,
-      migrations: migrations
-        ? {
-            definitions: migrations,
-            scopes: ['cache'],
-          }
-        : undefined,
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
       logger: this.logger.scope('db'),
@@ -300,7 +286,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
 
-    this.http = this.remote = new HttpClient<M>({
+    this.http = new HttpClient<M>({
       serverUrl,
       token,
       schemaFactory: async () => (await this.db.getSchema())?.collections as M,
@@ -311,19 +297,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     if (this.authOptions.token) {
       syncOptions.token = this.authOptions.token;
-      const variables: Record<string, any> = {};
       const decoded = decodeToken(
         this.authOptions.token,
         this.authOptions.claimsPath
       );
-      // For backwards compatibility assign to SESSION_USER_ID
-      if ('x-triplit-user-id' in decoded)
-        variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
 
-      // Assign token to session vars
-      Object.assign(variables, decoded);
-
-      this.db = this.db.withSessionVars(variables);
+      this.db = this.db.withSessionVars(decoded);
     }
 
     this.syncEngine = new SyncEngine(this, syncOptions);
@@ -354,8 +333,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    *
    * @returns The schema of the database as a Javascript object
    */
-  async getSchema() {
-    await this.db.getSchema();
+  async getSchema(): Promise<StoreSchema<M> | undefined> {
+    return await this.db.getSchema();
   }
 
   /**
@@ -404,7 +383,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetch<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
+  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query = addLoggingIdToQuery(query);
@@ -416,7 +395,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     if (opts.policy === 'local-first') {
       const localResults = await this.fetchLocal(query, opts);
-      if (localResults.size > 0) return localResults;
+      if (localResults.length > 0) return localResults;
       try {
         await this.syncEngine.syncQuery(query);
       } catch (e) {
@@ -453,7 +432,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   private async fetchLocal<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<DBFetchOptions>
-  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
+  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     const scope = parseScope(query);
     this.logger.debug('fetchLocal START', query, scope);
     const res = await this.db.fetch(query, {
@@ -478,7 +457,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     id: string,
     options?: Partial<FetchOptions>
   ): Promise<Unalias<
-    FetchResultEntity<ToQuery<M, ClientQueryDefault<M, CN>>>
+    FetchResultEntity<M, ToQuery<M, ClientQueryDefault<M, CN>>>
   > | null> {
     this.logger.debug('fetchById START', collectionName, id, options);
     const query = this.query(collectionName)
@@ -496,8 +475,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * - `full`: If true, clears the entire database. If false, only clears your application data. Defaults to `false`.
    * @returns a promise that resolves when the database has been cleared
    */
-  clear(options: { full?: boolean } = {}) {
+  clear(options: ClearOptions = {}) {
     return this.db.clear(options);
+  }
+
+  async reset(options: ClearOptions = {}) {
+    await this.syncEngine.reset();
+    await this.clear(options);
   }
 
   /**
@@ -510,7 +494,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetchOne<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<FetchResultEntity<ToQuery<M, CQ>>> | null> {
+  ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     query = addLoggingIdToQuery(query);
     query = { ...query, limit: 1 };
@@ -632,7 +616,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribe<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
@@ -671,7 +655,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
     let fulfilledTimeout: ReturnType<typeof setTimeout> | null = null;
-    let results: Unalias<FetchResult<ToQuery<M, CQ>>>;
+    let results: Unalias<FetchResult<M, ToQuery<M, CQ>>>;
     const userResultsCallback = onResults;
     const userErrorCallback = onError;
     onResults = (results, info) => {
@@ -687,7 +671,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         }
       : undefined;
     const clientSubscriptionCallback = (
-      newResults: Unalias<FetchResult<ToQuery<M, CQ>>>
+      newResults: Unalias<FetchResult<M, ToQuery<M, CQ>>>
     ) => {
       results = newResults;
       this.logger.debug('subscribe RESULTS', results);
@@ -705,6 +689,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     );
     if (scope.includes('cache')) {
       const onFulfilled = () => {
+        if (hasRemoteFulfilled) return;
         hasRemoteFulfilled = true;
         if (fulfilledTimeout !== null) {
           clearTimeout(fulfilledTimeout);
@@ -835,7 +820,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithPagination<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasNextPage: boolean;
@@ -879,7 +864,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       // If we have an after, the limit will increase by 1
       query.limit = requestedLimit! + 1 + (query.after ? 1 : 0);
       subscriptionResultHandler = (
-        results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+        results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
         const cursorAttr = query.order?.[0]?.[0];
@@ -898,12 +883,14 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
           !!query.after &&
           !!firstEntry &&
           compareCursors(query.after[0], [
+            // @ts-expect-error
             firstEntry[1][cursorAttr], // TODO need to translate things like dates
-            firstEntry[0],
+            // @ts-expect-error
+            firstEntry[1].id,
           ]) > -1;
 
         // If we have overflowing data, we can move the window forward
-        const canMoveWindowForward = results.size >= query.limit!; // Pretty sure this cant be gt, but still
+        const canMoveWindowForward = results.length >= query.limit!; // Pretty sure this cant be gt, but still
 
         // If we can page forward or backward (from the perspective of the original query)
         const hasPreviousPage =
@@ -926,10 +913,20 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
         // Track range of the current page for pagination functions
         rangeStart = firstDataEntry
-          ? [firstDataEntry[1][cursorAttr], firstDataEntry[0]]
+          ? [
+              // @ts-expect-error
+              firstDataEntry[1][cursorAttr],
+              // @ts-expect-error
+              firstDataEntry[1].id!,
+            ]
           : undefined;
         rangeEnd = lastDataEntry
-          ? [lastDataEntry[1][cursorAttr], lastDataEntry[0]]
+          ? [
+              // @ts-expect-error
+              lastDataEntry[1][cursorAttr],
+              // @ts-expect-error
+              lastDataEntry[1].id!,
+            ]
           : undefined;
 
         // To keep order consistent with the orignial query, reverse the entries if we are paging backwards
@@ -952,11 +949,14 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
             options
           );
         } else {
-          onResults(new Map(entries), {
-            ...info,
-            hasNextPage: hasNextPage,
-            hasPreviousPage: hasPreviousPage,
-          });
+          onResults(
+            entries.map(([, entity]) => entity),
+            {
+              ...info,
+              hasNextPage: hasNextPage,
+              hasPreviousPage: hasPreviousPage,
+            }
+          );
         }
       };
 
@@ -1028,7 +1028,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithExpand<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasMore: boolean;
@@ -1054,16 +1054,19 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       query = { ...query };
       query.limit = query.limit! + 1;
       subscriptionResultHandler = (
-        results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+        results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
-        const hasMore = results.size >= query.limit!;
+        const hasMore = results.length >= query.limit!;
         let entries = Array.from(results.entries());
         if (hasMore) entries = entries.slice(0, -1);
-        onResults(new Map(entries), {
-          hasRemoteFulfilled: info.hasRemoteFulfilled,
-          hasMore,
-        });
+        onResults(
+          entries.map(([, entity]) => entity),
+          {
+            hasRemoteFulfilled: info.hasRemoteFulfilled,
+            hasMore,
+          }
+        );
       };
 
       returnValue.loadMore = (pageSize?: number) => {
@@ -1088,7 +1091,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return returnValue as InfiniteSubscription;
   }
   /**
-   * Updates the `token` and/or `serverUrl` of the client. This will cause the client to close its current connection to the server and attempt reopen a new one with the provided options.
+   * Updates the `token` or `serverUrl` of the client. If the connection is currently open, it will be closed and you will need to call `connect()` again.
    *
    * @param options - The options to update the client with
    */
@@ -1101,22 +1104,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     // handle updating the token and variables for auth purposes
     if (hasToken) {
       this.authOptions = { ...this.authOptions, token };
-      const { claimsPath } = this.authOptions;
-
-      const variables: Record<string, any> = {};
-      const decoded = decodeToken(
-        this.authOptions.token!,
-        this.authOptions.claimsPath
-      );
-      // For backwards compatibility assign to SESSION_USER_ID
-      if ('x-triplit-user-id' in decoded)
-        variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
-
-      // Assign token to session vars
-      Object.assign(variables, decoded);
-
-      this.db = this.db.withSessionVars(variables);
-
+      const decoded = this.authOptions.token
+        ? decodeToken(this.authOptions.token, this.authOptions.claimsPath)
+        : {};
+      this.db = this.db.withSessionVars(decoded);
       // and update the sync engine
       updatedSyncOptions = { ...updatedSyncOptions, token };
     }

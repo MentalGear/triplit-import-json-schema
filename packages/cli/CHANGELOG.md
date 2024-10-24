@@ -1,5 +1,67 @@
 # @triplit/cli
 
+## 0.6.1
+
+### Patch Changes
+
+- 8966b0fe: Manual version bump for CLI dependencies
+
+## 0.6.0
+
+### Minor Changes
+
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- 38746526: Manual version bump for CLI dependencies
+
+## 0.5.14
+
+### Patch Changes
+
+- 5fed7f42: Manual version bump for CLI dependencies
+
+## 0.5.13
+
+### Patch Changes
+
+- 5eae93dc: Manual version bump for CLI dependencies
+
+## 0.5.12
+
+### Patch Changes
+
+- 99a5b854: Manual version bump for CLI dependencies
+
+## 0.5.11
+
+### Patch Changes
+
+- 7a48f517: Manual version bump for CLI dependencies
+
+## 0.5.10
+
+### Patch Changes
+
+- 4f99c558: Manual version bump for CLI dependencies
+- a902f8b8: unify session variable transformation logic
+
+## 0.5.9
+
+### Patch Changes
+
+- 7ea2a0a9: Manual version bump for CLI dependencies
+- e81a0619: Support multi-file schemas
+
+## 0.5.8
+
+### Patch Changes
+
+- e7ff3fed: Update CLI types
+- 22b3e245: improve error messaging for nonexistent seeds
+- 104027d8: Manual version bump for CLI dependencies
+
 ## 0.5.7
 
 ### Patch Changes

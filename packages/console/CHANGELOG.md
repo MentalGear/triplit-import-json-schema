@@ -1,5 +1,105 @@
 # @triplit/console
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [8966b0fe]
+- Updated dependencies [761648cf]
+- Updated dependencies [761648cf]
+  - @triplit/db@0.4.1
+  - @triplit/client@0.5.1
+  - @triplit/react@0.4.1
+
+## 0.4.0
+
+### Minor Changes
+
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [38746526]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+- Updated dependencies [38746526]
+- Updated dependencies [abe8bea8]
+  - @triplit/client@0.5.0
+  - @triplit/db@0.4.0
+  - @triplit/react@0.4.0
+
+## 0.3.104
+
+### Patch Changes
+
+- Updated dependencies [5fed7f42]
+- Updated dependencies [3c7fd004]
+  - @triplit/db@0.3.75
+  - @triplit/client@0.4.13
+  - @triplit/react@0.3.102
+
+## 0.3.103
+
+### Patch Changes
+
+- Updated dependencies [5eae93dc]
+- Updated dependencies [5eae93dc]
+  - @triplit/react@0.3.101
+  - @triplit/db@0.3.74
+  - @triplit/client@0.4.12
+
+## 0.3.102
+
+### Patch Changes
+
+- Updated dependencies [9a123967]
+- Updated dependencies [99a5b854]
+  - @triplit/react@0.3.100
+  - @triplit/db@0.3.73
+  - @triplit/client@0.4.11
+
+## 0.3.101
+
+### Patch Changes
+
+- @triplit/db@0.3.72
+- @triplit/client@0.4.10
+- @triplit/react@0.3.99
+
+## 0.3.100
+
+### Patch Changes
+
+- Updated dependencies [4f99c558]
+- Updated dependencies [a902f8b8]
+  - @triplit/db@0.3.71
+  - @triplit/client@0.4.9
+  - @triplit/react@0.3.98
+
+## 0.3.99
+
+### Patch Changes
+
+- Updated dependencies [7ea2a0a9]
+  - @triplit/client@0.4.8
+  - @triplit/react@0.3.97
+
+## 0.3.98
+
+### Patch Changes
+
+- 833b69c9: better handle relations with variables
+- Updated dependencies [104027d8]
+- Updated dependencies [59d9c3bc]
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+- Updated dependencies [833b69c9]
+- Updated dependencies [ecc5a959]
+  - @triplit/db@0.3.70
+  - @triplit/react@0.3.96
+  - @triplit/client@0.4.7
+
 ## 0.3.97
 
 ### Patch Changes

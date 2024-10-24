@@ -15,18 +15,18 @@ import {
   CollectionQuery,
   QueryValue,
   RelationshipExistsFilter,
-} from './query/types';
+} from './query/types/index.js';
 import { isFilterGroup, isFilterStatement } from './query.js';
 import { getSchemaFromPath, triplesToSchema } from './schema/schema.js';
 import { schemaToTriples } from './schema/export/index.js';
-import { Models, StoreSchema } from './schema/types';
+import { Models, StoreSchema } from './schema/types/index.js';
 import {
   diffSchemas,
   getSchemaDiffIssues,
   PossibleDataViolations,
 } from './schema/diff.js';
 import { TripleStoreApi } from './triple-store.js';
-import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
+import { VALUE_TYPE_KEYS } from './data-types/constants.js';
 import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { Attribute, TupleValue } from './triple-store-utils.js';
@@ -35,7 +35,7 @@ import {
   convertEntityToJS,
 } from './collection-query.js';
 import { Logger } from '@triplit/types/logger';
-import { FetchResult } from './query/types';
+import { FetchResult } from './query/types/index.js';
 import { genToArr } from './utils/generator.js';
 
 const ID_SEPARATOR = '#';
@@ -78,7 +78,7 @@ export function stripCollectionFromId(id: string): string {
 }
 
 export function replaceVariablesInFilterStatements<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(
   statements: QueryWhere<M, CN>,
@@ -129,13 +129,13 @@ export function replaceVariable(
 }
 
 export function* filterStatementIterator<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(
   statements: QueryWhere<M, CN>
 ): Generator<
   | FilterStatement<M, CN>
-  | SubQueryFilter
+  | SubQueryFilter<M>
   | RelationshipExistsFilter<M, CN>
   | boolean
 > {
@@ -149,13 +149,13 @@ export function* filterStatementIterator<
 }
 
 export function someFilterStatements<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(
   statements: QueryWhere<M, CN>,
   someFunction: (
     statement:
-      | SubQueryFilter
+      | SubQueryFilter<M>
       | FilterStatement<M, CN>
       | RelationshipExistsFilter<M, CN>
       | boolean
@@ -173,19 +173,21 @@ export async function getSchemaTriples(tripleStore: TripleStoreApi) {
   );
 }
 
-export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
+export async function readSchemaFromTripleStore<M extends Models = Models>(
+  tripleStores: TripleStoreApi
+) {
   const schemaTriples = await getSchemaTriples(tripleStores);
   const schema =
-    schemaTriples.length > 0 ? triplesToSchema(schemaTriples) : undefined;
+    schemaTriples.length > 0 ? triplesToSchema<M>(schemaTriples) : undefined;
   return {
     schema,
     schemaTriples,
   };
 }
 
-export async function overrideStoredSchema<M extends Models<any, any>>(
+export async function overrideStoredSchema<M extends Models>(
   db: DB<M>,
-  schema: StoreSchema<M>
+  schema: StoreSchema<M> | undefined
 ): Promise<{
   successful: boolean;
   issues: PossibleDataViolations[];
@@ -279,7 +281,7 @@ export function logSchemaChangeViolations(
 }
 
 export function validateTriple(
-  schema: Models<any, any>,
+  schema: Models,
   attribute: Attribute,
   value: TupleValue
 ) {
@@ -331,7 +333,7 @@ export function validateTriple(
 }
 
 export async function getCollectionSchema<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(tx: DB<M> | DBTransaction<M>, collectionName: CN) {
   const res = await tx.getSchema();
@@ -345,17 +347,17 @@ export async function getCollectionSchema<
 }
 
 export function fetchResultToJS<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   Q extends CollectionQuery<M, CollectionNameFromModels<M>>
 >(
   results: TimestampedFetchResult<Q>,
-  schema: M,
+  schema: M | undefined,
   collectionName: CollectionNameFromModels<M>
-): FetchResult<Q> {
+): FetchResult<M, Q> {
   results.forEach((entity, id) => {
-    results.set(id, convertEntityToJS(entity, schema, collectionName));
+    results.set(id, convertEntityToJS(entity as any, schema, collectionName));
   });
-  return results;
+  return Array.from(results.values()) as unknown as FetchResult<M, Q>;
 }
 
 export function isValueVariable(value: QueryValue): value is string {

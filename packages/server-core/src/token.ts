@@ -100,12 +100,14 @@ export async function parseAndValidateToken(
         error: new InvalidTokenSignatureError(),
       };
     }
-  } catch (err) {
-    // console.error(err);
-    // TODO add better expiration error
+  } catch (err: any) {
     return {
       data: undefined,
-      error: new InvalidTokenSignatureError(),
+      error: new InvalidTokenSignatureError(
+        'message' in err
+          ? err.message
+          : 'Error thrown during token verification'
+      ),
     };
   }
 

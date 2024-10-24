@@ -51,7 +51,7 @@ function parseClientMessage(
 
 export type ServerOptions = {
   storage?: StoreKeys | Storage | (() => Storage);
-  dbOptions?: DBConfig<any>;
+  dbOptions?: DBConfig;
   watchMode?: boolean;
   verboseLogs?: boolean;
   upstream?: {
@@ -106,7 +106,10 @@ function resolveStorageStringOption(storage: StoreKeys): Storage {
 export function createServer(options?: ServerOptions) {
   const dbSource = !!options?.storage
     ? typeof options.storage === 'string'
-      ? resolveStorageStringOption(options.storage)
+      ? resolveStorageStringOption(
+          // @ts-ignore TODO: check why this is not working...might be module resolution issue?
+          options.storage
+        )
       : typeof options.storage === 'function'
       ? options.storage()
       : options.storage

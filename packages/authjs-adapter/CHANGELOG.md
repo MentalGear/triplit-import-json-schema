@@ -1,5 +1,29 @@
 # @triplit/authjs-adapter
 
+## 2.0.0
+
+### Minor Changes
+
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+- Updated dependencies [38746526]
+- Updated dependencies [abe8bea8]
+  - @triplit/client@0.5.0
+
+## 1.0.2
+
+### Patch Changes
+
+- c1efa697: Update authjs-adapter types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 1.0.1
 
 ### Patch Changes

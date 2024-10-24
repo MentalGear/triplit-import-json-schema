@@ -1,5 +1,86 @@
 # @triplit/client
 
+## 0.5.1
+
+### Patch Changes
+
+- 761648cf: Properly handle optional props in Entity type, add type EntityWithSelection for including a selection or inclusion with Entity
+- Updated dependencies [8966b0fe]
+- Updated dependencies [761648cf]
+  - @triplit/db@0.4.1
+
+## 0.5.0
+
+### Minor Changes
+
+- 0a09013b: Sunset migrations API
+- f894e435: update query return type to array
+- abe8bea8: Sunset client.remote, RemoteClient, server config param
+- 38746526: Add reset API for full state resets of client, updateToken and updateOptions do not automatically reconnect anymore
+- abe8bea8: Sunset entityId() in builder
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [38746526]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+  - @triplit/db@0.4.0
+
+## 0.4.13
+
+### Patch Changes
+
+- 3c7fd004: Add WorkerInternalClient class for reuse inside Workers
+- Updated dependencies [5fed7f42]
+  - @triplit/db@0.3.75
+
+## 0.4.12
+
+### Patch Changes
+
+- Updated dependencies [5eae93dc]
+  - @triplit/db@0.3.74
+
+## 0.4.11
+
+### Patch Changes
+
+- Updated dependencies [99a5b854]
+  - @triplit/db@0.3.73
+
+## 0.4.10
+
+### Patch Changes
+
+- @triplit/db@0.3.72
+
+## 0.4.9
+
+### Patch Changes
+
+- a902f8b8: unify session variable transformation logic
+- Updated dependencies [4f99c558]
+- Updated dependencies [a902f8b8]
+  - @triplit/db@0.3.71
+
+## 0.4.8
+
+### Patch Changes
+
+- 7ea2a0a9: dedupe queries in sync engine
+
+## 0.4.7
+
+### Patch Changes
+
+- b5374280: Update client types
+- 22b3e245: add getSchema methods to WorkerClient
+- Updated dependencies [104027d8]
+- Updated dependencies [833b69c9]
+- Updated dependencies [ecc5a959]
+  - @triplit/db@0.3.70
+
 ## 0.4.6
 
 ### Patch Changes

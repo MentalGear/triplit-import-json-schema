@@ -3,7 +3,7 @@
   "repository": "github:aspen-cloud/triplit",
   "homepage": "https://triplit.dev",
   "license": "AGPL-3.0-only",
-  "version": "0.3.69",
+  "version": "0.4.1",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -12,8 +12,7 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "require": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
     },
     "./storage/*": {
       "types": "./dist/types/storage/*.d.ts",
@@ -37,7 +36,7 @@
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "yarn test:unit",
+    "test": "yarn test:unit && yarn typecheck",
     "test:unit": "vitest run",
     "test:watch": "vitest watch",
     "test-coverage": "vitest --coverage",
@@ -67,6 +66,7 @@
     "fast-check": "^3.16.0",
     "rxdb": "^14.14.2",
     "rxjs": "^7.8.1",
+    "sorted-btree": "^1.8.1",
     "tinybench": "^2.5.0",
     "typescript": "^5.2.2",
     "valibot": "^0.42.1",
@@ -76,12 +76,11 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.15",
-    "@triplit/tuple-database": "2.2.25",
+    "@triplit/tuple-database": "workspace:^",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "idb": "^7.1.1",
     "nanoid": "^3.0.0",
-    "pino": "^8.11.0",
-    "tinybench": "^2.5.0"
+    "pino": "^8.11.0"
   }
 }
