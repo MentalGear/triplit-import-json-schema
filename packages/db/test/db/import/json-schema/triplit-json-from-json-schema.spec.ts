@@ -1,6 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { triplitJsonFromJsonSchema } from '../../../../src/schema/import/json-schema/triplit-json-from-json-schema';
+import {
+  triplitJsonFromJsonSchema,
+  triplitJsonFromJsonSchemaSingleCollection,
+} from '../../../../src/schema/import/json-schema/triplit-json-from-json-schema';
 import { exportSchemaAsJSONSchema } from '../../../../src/schema/export/json-schema/export';
 import { schema as exhaustiveTestTriplitSchema } from '../../export/exhaustive-test-schema';
 
@@ -99,7 +102,7 @@ describe('Essential Tests', () => {
     // );
   });
 
-  test('defaultFillIn=false should not copy over default values', () => {
+  test('useJsonSchemaDefault=false should not copy over default values', () => {
     //
     const jsonSchemaComprensiveTest = {
       title: 'Comprehensive Test Schema',
@@ -171,7 +174,7 @@ describe('Essential Tests', () => {
     expect(warnSpy).toHaveBeenCalled();
 
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/not supported/i)
+      expect.stringMatching(/not enforcable/i)
     );
 
     // restore the original console.warn function
@@ -693,10 +696,13 @@ describe('Additional Compatibility Tests (partially from LLM claude sonnet 3.5 g
 
     const result = triplitJsonFromJsonSchema(complexNestedSchema);
     expect(result?.collections.level1.schema.type).toBe('record');
+    //@ts-expect-error
     expect(result?.collections.level1.schema.properties.level2.type).toBe(
       'record'
     );
+
     expect(
+      //@ts-expect-error
       result?.collections.level1.schema.properties.level2.properties.level3.type
     ).toBe('record');
   });
@@ -741,10 +747,13 @@ describe('Additional Compatibility Tests (partially from LLM claude sonnet 3.5 g
     const result = triplitJsonFromJsonSchema(stringFormatsSchema);
     expect(result?.collections.dateTime.schema.type).toBe('date');
     expect(result?.collections.uri.schema.type).toBe('string');
+    // @ts-ignore we do not care if there's an extra format prop
     expect(result?.collections.uri.schema.format).toBe('uri');
     expect(result?.collections.ipv4.schema.type).toBe('string');
+    // @ts-ignore we do not care if there's an extra format prop
     expect(result?.collections.ipv4.schema.format).toBe('ipv4');
     expect(result?.collections.ipv6.schema.type).toBe('string');
+    // @ts-ignore we do not care if there's an extra format prop
     expect(result?.collections.ipv6.schema.format).toBe('ipv6');
     expect(result?.collections.regularString.schema.type).toBe('string');
   });
@@ -1293,6 +1302,287 @@ describe('Additional Compatibility Tests (partially from LLM claude sonnet 3.5 g
       expect(err).toBeInstanceOf(Error);
       expect(err.details).toBeDefined(); // Check that `details` exists
     }
+  });
+
+  test('Single Collection', () => {
+    const singleCollection: JSONSchema7 = {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          pattern: '^[a-zA-Z0-9_-]{21}$',
+        },
+        boolean: {
+          type: 'boolean',
+        },
+        number: {
+          type: 'number',
+        },
+        string: {
+          type: 'string',
+        },
+        stringDefault: {
+          type: 'string',
+          default: 'default string',
+        },
+        stringEnum: {
+          type: 'string',
+          enum: ['1', '2'],
+        },
+        date: {
+          type: 'string',
+          format: 'date-time',
+        },
+        setString: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+          },
+        },
+        setNumber: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'number',
+          },
+        },
+        setBoolean: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'boolean',
+          },
+        },
+        setDate: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+        setStringEnum: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+            enum: ['a', 'b'],
+          },
+        },
+      },
+      required: [
+        'id',
+        'boolean',
+        'number',
+        'string',
+        'stringEnum',
+        'date',
+        'setString',
+        'setNumber',
+        'setBoolean',
+        'setDate',
+        'setStringEnum',
+        'relation',
+      ],
+      additionalProperties: false,
+      $schema: 'http://json-schema.org/draft-07/schema#',
+    };
+
+    const result = triplitJsonFromJsonSchemaSingleCollection({
+      jsonSchema: singleCollection,
+      useJsonSchemaDefault: true,
+    });
+
+    expect(result).toEqual({
+      schema: {
+        type: 'record',
+        properties: {
+          id: {
+            type: 'string',
+            options: {},
+          },
+          boolean: {
+            type: 'boolean',
+            options: {},
+          },
+          number: {
+            type: 'number',
+            options: {},
+          },
+          string: {
+            type: 'string',
+            options: {},
+          },
+          stringDefault: {
+            type: 'string',
+            options: {
+              default: 'default string',
+            },
+          },
+          stringEnum: {
+            type: 'string',
+            options: {
+              enum: ['1', '2'],
+            },
+          },
+          date: {
+            options: {},
+            type: 'date',
+          },
+          setString: {
+            type: 'set',
+            items: {
+              type: 'string',
+              options: {},
+            },
+            options: {},
+          },
+          setNumber: {
+            type: 'set',
+            items: {
+              type: 'number',
+              options: {},
+            },
+            options: {},
+          },
+          setBoolean: {
+            type: 'set',
+            items: {
+              type: 'boolean',
+              options: {},
+            },
+            options: {},
+          },
+          setDate: {
+            type: 'set',
+            items: {
+              type: 'date',
+              options: {},
+            },
+            options: {},
+          },
+          setStringEnum: {
+            type: 'set',
+            items: {
+              type: 'string',
+              options: {
+                enum: ['a', 'b'],
+              },
+            },
+            options: {},
+          },
+        },
+        additionalProperties: false,
+        $schema: 'http://json-schema.org/draft-07/schema#',
+        optional: ['stringDefault'],
+      },
+      permissions: undefined,
+    });
+  });
+
+  test('checkInputJsonSchema=true: let not strict JsonSchema input pass', () => {
+    const singleCollection: JSONSchema7 = {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          pattern: '^[a-zA-Z0-9_-]{21}$',
+        },
+        boolean: {
+          type: 'boolean',
+        },
+        number: {
+          type: 'number',
+        },
+        string: {
+          type: 'string',
+        },
+        stringDefault: {
+          type: 'string',
+          default: 'default string',
+        },
+        stringEnum: {
+          type: 'string',
+          enum: ['1', '2'],
+        },
+        date: {
+          type: 'string',
+          format: 'date-time',
+        },
+        setString: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+          },
+        },
+        setNumber: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'number',
+          },
+        },
+        setBoolean: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'boolean',
+          },
+        },
+        setDate: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+        setStringEnum: {
+          type: 'array',
+          uniqueItems: true,
+          items: {
+            type: 'string',
+            enum: ['a', 'b'],
+          },
+        },
+        relation: {
+          //@ts-expect-error
+          type: 'query',
+          query: {
+            collectionName: 'nodes',
+            where: [['id', '=', '$root_node_id']],
+          },
+          cardinality: 'one',
+        },
+      },
+      required: [
+        'id',
+        'boolean',
+        'number',
+        'string',
+        'stringEnum',
+        'date',
+        'setString',
+        'setNumber',
+        'setBoolean',
+        'setDate',
+        'setStringEnum',
+        'relation',
+      ],
+      additionalProperties: false,
+    };
+
+    const checkInputJsonSchema = false;
+    const result = triplitJsonFromJsonSchemaSingleCollection({
+      jsonSchema: singleCollection,
+      permissions: {},
+      useJsonSchemaDefault: true,
+      checkInputJsonSchema: checkInputJsonSchema,
+    });
+    // debugger;
+    expect(result).toBeDefined();
   });
 });
 

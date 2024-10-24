@@ -1,29 +1,52 @@
 import { JSONSchema7 } from 'json-schema';
 import { invertTransformations } from './invert-transform-functions.js';
-import { SchemaDefinition } from 'packages/db/src/data-types/serialization.js';
+import {
+  CollectionDefinition,
+  SchemaDefinition,
+} from 'packages/db/src/data-types/serialization.js';
 import { JSONToSchema } from '../../schema.js';
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import { RolePermissions } from '../../types/models.js';
 
 const ajv = new Ajv({
   // options
   strict: 'log',
 });
-
 addFormats(ajv);
 
+/**
+ * Generates Triplit JSON from JSON Schema
+ * @param jsonSchema
+ * @param useJsonSchemaDefault whether the jsonSchema's default value should be used to fill in default - jsonSchema's default is per spec only meant to be used for examples in doc generation, but might be used otherwise depending on generator
+ * @param checkInputJsonSchema set to false if you need to convert json data that might not be fully/strictly JSON schema compliant
+ * @param permissions?
+ * @param version?
+ **/
 export function triplitJsonFromJsonSchema(
   jsonSchema: JSONSchema7,
-  defaultFillIn = true
+  useJsonSchemaDefault = true,
+  checkInputJsonSchema = true,
+  permissions: {} | undefined = undefined,
+  version = 0
 ): SchemaDefinition | undefined {
   // work on copy to keep original immutable
   const jsonSchemaCopy = structuredClone(jsonSchema);
 
-  const schemaEvaluation = ajv.compile(jsonSchemaCopy);
+  // TODO:
+  // should deref all?
+  //   - only local?
+  //   - file? requires node-fs module
+  //   - web? requires fetch module, or native node fetch, but exposes to WebAssembly.
+  //   - CURRENT Approach: leave it to the dev to input json that is de-refed
 
-  if (schemaEvaluation.errors != null)
-    throw new Error('Input is not a valid JSON schema');
+  if (checkInputJsonSchema) {
+    const schemaEvaluation = ajv.compile(jsonSchemaCopy);
+
+    if (schemaEvaluation.errors != null)
+      throw new Error('Input is not of valid JsonSchema format');
+  }
 
   const collections: Record<string, any> = {};
 
@@ -32,12 +55,13 @@ export function triplitJsonFromJsonSchema(
   )) {
     const transformedData = invertTransformations(
       collectionSchema as JSONSchema7,
-      defaultFillIn
+      useJsonSchemaDefault
     );
 
     collections[collectionName] = {
-      //
       schema: transformedData,
+      permissions: permissions ? permissions : undefined,
+      // ...(permissions ?? (false && { permissions })),
     };
   }
 
@@ -51,12 +75,58 @@ export function triplitJsonFromJsonSchema(
 
   const triplitJsonSchema = {
     collections,
-    version: 0,
+    version,
+    // roles
   };
 
   validateTriplitSchema(triplitJsonSchema);
 
   return triplitJsonSchema;
+}
+
+export function triplitJsonFromJsonSchemaSingleCollection(
+  data: {
+    jsonSchema: JSONSchema7;
+    permissions?: RolePermissions<any, any>;
+    useJsonSchemaDefault?: boolean;
+    checkInputJsonSchema?: boolean;
+  } = {
+    jsonSchema: {},
+    permissions: {},
+    useJsonSchemaDefault: true,
+    checkInputJsonSchema: true,
+  }
+): CollectionDefinition | undefined {
+  // work on copy to keep original immutable
+  const {
+    jsonSchema,
+    permissions,
+    useJsonSchemaDefault,
+    checkInputJsonSchema,
+  } = data;
+
+  const jsonSchemaCopy = structuredClone(jsonSchema);
+
+  const singleSchema = {
+    description: 'wrapping schema needed for triplitJsonFromJsonSchema',
+    properties: {
+      collectionSingle: {
+        // permissions,
+        ...jsonSchemaCopy,
+      },
+    },
+    // $schema: 'http://json-schema.org/draft-07/schema#',
+    // additionalProperties: false,
+  };
+
+  const triplitSchemaFromJson = triplitJsonFromJsonSchema(
+    singleSchema,
+    useJsonSchemaDefault,
+    checkInputJsonSchema,
+    permissions
+  );
+
+  return triplitSchemaFromJson?.collections?.collectionSingle;
 }
 
 function validateTriplitSchema(triplitJsonSchema: {
