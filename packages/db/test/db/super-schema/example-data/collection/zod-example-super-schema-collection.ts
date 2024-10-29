@@ -43,7 +43,6 @@ export const schemaFlatZodValid_noId: SuperSchemaCollection = {
 
 export const schemaFlatZodValid_wrongId: SuperSchemaCollection = {
   schema: {
-    // validation lib types
     id: z.number(),
     boolean: z.boolean(),
     number: z.number(),
@@ -81,7 +80,8 @@ export const schemaFlatZodValid_wrongId: SuperSchemaCollection = {
 export const schemaFlatZodValid: SuperSchemaCollection = {
   schema: {
     // validation lib types
-    id: z.string().nanoid(),
+    // prev: id: z.string().nanoid(),
+    id: 'nanoid',
     boolean: z.boolean(),
     number: z.number(),
     string: z.string(),

@@ -3,7 +3,7 @@ export const expectedJsonOutput = {
   properties: {
     id: {
       type: 'string',
-      pattern: '^[a-zA-Z0-9_-]{21}$',
+      // pattern: '^[a-zA-Z0-9_-]{21}$',
     },
     boolean: {
       type: 'boolean',
@@ -65,7 +65,6 @@ export const expectedJsonOutput = {
     },
   },
   required: [
-    'id',
     'boolean',
     'number',
     'string',

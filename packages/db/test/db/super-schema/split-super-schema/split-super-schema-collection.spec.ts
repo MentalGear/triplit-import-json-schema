@@ -3,8 +3,6 @@ import { describe, expect, test } from 'vitest';
 import { splitSuperSchemaCollection } from '../../../../src/schema/super-schema/split-super-schema-collection';
 
 import { zodAdapter } from '../../../../src/schema/super-schema/adapters/zod';
-import { valibotAdapter } from '../../../../src/schema/super-schema/adapters/valibot';
-import { ValidationLibAdapter } from '../../../../src/schema/super-schema/adapters/ValidationLibAdapter';
 import { expectedJsonOutputComplex } from './expected-json-output-complex';
 import { expectedJsonOutput } from './expected-json-output';
 import {
@@ -14,6 +12,8 @@ import {
   schemaFlatZodValid,
 } from '../example-data/collection/zod-example-super-schema-collection';
 import { ZodObject } from 'zod';
+import { transformObjectDeeply } from '../../../../src/schema/export/json-schema/transform-object-deeply';
+import { JSONSchema7 } from 'json-schema';
 
 // ========================================================================
 // Tests
@@ -66,6 +66,18 @@ describe('Flat Structure', () => {
     expect(Object.keys(relationObj).sort()).toEqual(expectedKeys.sort());
   });
 
+  test('extract all special id items', () => {
+    // e.g. id = "nanoid"
+    const output = splitSuperSchemaCollection(schemaFlatZodValid, zodAdapter);
+
+    const expectedKeys = ['id'];
+
+    const idsObj = output.idsObj;
+
+    expect(Object.keys(idsObj)).toHaveLength(expectedKeys.length);
+    expect(Object.keys(idsObj).sort()).toEqual(expectedKeys.sort());
+  });
+
   test('extract all unknown items', () => {
     const output = splitSuperSchemaCollection(schemaFlatZod, zodAdapter);
 
@@ -83,7 +95,7 @@ describe('Flat Structure', () => {
     expect(output).not.toHaveProperty('roles');
   });
 
-  test('throw if no validationAdaptar provided', () => {
+  test('throw if no validationAdapter provided', () => {
     // @ts-ignore
     expect(() => splitSuperSchemaCollection(schemaFlatZod)).toThrowError();
   });
@@ -100,7 +112,9 @@ describe('Complex Structures', () => {
 
     const jsonSchema = zodAdapter.jsonSchemaFrom(validationObj);
 
-    expect(jsonSchema).toEqual(expectedJsonOutputComplex);
+    const jsonSchemaWithoutIdDefaults = removeIdDefault(jsonSchema);
+
+    expect(jsonSchemaWithoutIdDefaults).toEqual(expectedJsonOutputComplex);
   });
 
   test('unknown items have same nested structure as original item', () => {
@@ -131,7 +145,9 @@ describe('JSON conversion', () => {
 
     const jsonSchema = zodAdapter.jsonSchemaFrom(validationObj);
 
-    expect(jsonSchema).toEqual(expectedJsonOutput);
+    const jsonSchemaWithoutIdDefaults = removeIdDefault(jsonSchema);
+
+    expect(jsonSchemaWithoutIdDefaults).toEqual(expectedJsonOutput);
   });
 
   // test.todo('Valibot to JSON Schema', () => {
@@ -164,3 +180,14 @@ describe('Validation Lib Output', () => {
     expect(output.validationObj).toBeInstanceOf(ZodObject);
   });
 });
+
+function removeIdDefault(jsonSchema: JSONSchema7) {
+  // in the actual implenetation jsonSchema id defaults are not relevant
+  // since mergeIds func overwrites ids fields
+  return transformObjectDeeply(
+    structuredClone(jsonSchema),
+    function (obj, overlyingObj, currentObjKey) {
+      if (currentObjKey === 'id') delete obj.default;
+    }
+  );
+}

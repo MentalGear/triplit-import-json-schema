@@ -24,13 +24,17 @@ export interface ValidationLibAdapter {
   wrapInContainer: (obj: any) => any;
   isOwnContainer: (obj: any) => boolean;
   isOwnType: (obj: any) => boolean;
-  isStringType: (obj: any) => boolean;
-  isNullable: (obj: any) => boolean;
   isDefaultRandom: (obj: any) => boolean;
-  setDefaultFunction: (obj: any, func: () => string) => any;
-  setCustomValidationFunction: (obj: any) => boolean;
+  generateStringType: (
+    defaultFunc: () => string,
+    validationFunc: () => boolean
+  ) => any;
   jsonSchemaFrom: (obj: any) => JSONSchema7;
 
+  // isStringType: (obj: any) => boolean;
+  // isNullable: (obj: any) => boolean;
+  // setDefaultFunction: (obj: any, defaultFunc: () => string) => any;
+  // setCustomValidationFunction: (obj: any, validationFunc: () => boolean) => any;
   // corrections?: ValidationCorrection[];
   // idMapping: {
   // not needed anymore, since triplit allows any string as id

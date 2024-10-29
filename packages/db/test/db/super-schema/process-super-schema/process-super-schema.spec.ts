@@ -20,7 +20,7 @@ describe('Super Schema Artifacts', () => {
 
     expect(output).toHaveProperty('roles');
     expect(output).toHaveProperty('validationSchema');
-    expect(output).toHaveProperty('triplitSchema');
+    expect(output).toHaveProperty('triplitJsonSchema');
   });
 
   test('all output properties are present, even if roles are not defined', () => {
@@ -31,7 +31,7 @@ describe('Super Schema Artifacts', () => {
 
     expect(output).toHaveProperty('roles');
     expect(output).toHaveProperty('validationSchema');
-    expect(output).toHaveProperty('triplitSchema');
+    expect(output).toHaveProperty('triplitJsonSchema');
   });
 
   test('has expected roles', () => {
@@ -62,9 +62,9 @@ describe('Super Schema Artifacts', () => {
 
   test('has expected relations', () => {
     const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
-
+    // debugger;
     expect(
-      output.triplitSchema.collections.exampleCollection.schema.properties
+      output.triplitJsonSchema.collections.exampleCollection.schema.properties
         ?.relation
     ).toEqual({
       type: 'query',
@@ -81,7 +81,7 @@ describe('Super Schema Artifacts', () => {
     const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
 
     expect(
-      output.triplitSchema?.collections?.exampleCollection.permissions
+      output.triplitJsonSchema?.collections?.exampleCollection.permissions
     ).toEqual({
       admin: {
         insert: {
@@ -101,7 +101,7 @@ describe('Super Schema Artifacts', () => {
   test('has expected output', () => {
     const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
 
-    expect(output.triplitSchema).toEqual({
+    expect(output.triplitJsonSchema).toEqual({
       collections: {
         exampleCollection: {
           permissions: {
@@ -121,7 +121,13 @@ describe('Super Schema Artifacts', () => {
             properties: {
               id: {
                 type: 'string',
-                options: {},
+                options: {
+                  default: {
+                    args: null,
+                    func: 'uuid',
+                  },
+                  nullable: false,
+                },
               },
               boolean: {
                 type: 'boolean',
@@ -205,7 +211,7 @@ describe('Super Schema Artifacts', () => {
             },
             additionalProperties: false,
             $schema: 'http://json-schema.org/draft-07/schema#',
-            optional: ['stringDefault'],
+            optional: ['id', 'stringDefault'],
           },
         },
       },
@@ -219,9 +225,10 @@ describe('Super Schema Artifacts', () => {
 import { TriplitClient } from '../../../../../client/src/client/triplit-client';
 import { JSONToSchema } from '../../../../src/schema/schema';
 import { SuperSchema } from '../../../../src/schema/super-schema/SuperSchema';
+import { Schema as S } from '../../../../src/schema/builder';
 
 describe('ids requirements', () => {
-  test('all root level items need an id', () => {
+  test('all top level schemas must have an id field', () => {
     expect(() => {
       processSuperSchema(superSchemaFlatZodValid_noId, zodAdapter);
     }).toThrowError(
@@ -230,15 +237,55 @@ describe('ids requirements', () => {
     );
   });
 
-  // test('id: "nanoid"', () => {
-  //   const idTestSchema: SuperSchema = {
-  //     collections: {
-  //       exampleCollection: { schema: { id: 'nanoid' } },
-  //     },
-  //   };
+  test('top level ids must be of predefined enum', () => {
+    const schema: SuperSchema = {
+      version: 0.1,
 
-  //   expect(processSuperSchema(idTestSchema, zodAdapter));
-  // });
+      collections: {
+        exampleCollection: { schema: { id: 'not_nanoid' } },
+      },
+    };
+
+    expect(() => {
+      processSuperSchema(schema, zodAdapter);
+    }).toThrowError('Top-level id fields can only be set to nanoid');
+  });
+
+  test('id: "nanoid" converts to correct Triplit and Validation schema value', () => {
+    const idTestSchema: SuperSchema = {
+      collections: {
+        exampleCollection: {
+          schema: {
+            // validation lib types
+            id: 'nanoid',
+            boolean: z.boolean(),
+            number: z.number(),
+            string: z.string(),
+            stringDefault: z.string().default('default string'),
+            stringEnum: z.enum(['1', '2']),
+            date: z.date(),
+
+            setString: z.set(z.string()),
+            setNumber: z.set(z.number()),
+            setBoolean: z.set(z.boolean()),
+            setDate: z.set(z.date()),
+            setStringEnum: z.set(z.enum(['a', 'b'])),
+
+            // Triplit-only types
+            relation: S.RelationById('linkedCollection', '$root_node_id'),
+          },
+        },
+      },
+    };
+
+    const res = processSuperSchema(idTestSchema, zodAdapter);
+
+    expect(() => {
+      processSuperSchema(idTestSchema, zodAdapter);
+    }).not.toThrowError();
+
+    expect(res.validationSchema.exampleCollection.shape.id).toBeDefined();
+  });
 
   // test('root level id have to be of type string', () => {
   //   expect(() => {
@@ -264,9 +311,36 @@ describe('ids requirements', () => {
 describe('Integration tests', () => {
   describe('flat structures', () => {
     test('generated Triplit Schema accepted by Triplit Client', () => {
+      const idTestSchema: SuperSchema = {
+        collections: {
+          exampleCollection: {
+            schema: {
+              // validation lib types
+              id: 'nanoid',
+              boolean: z.boolean(),
+              number: z.number(),
+              string: z.string(),
+              stringDefault: z.string().default('default string'),
+              stringEnum: z.enum(['1', '2']),
+              date: z.date(),
+
+              setString: z.set(z.string()),
+              setNumber: z.set(z.number()),
+              setBoolean: z.set(z.boolean()),
+              setDate: z.set(z.date()),
+              setStringEnum: z.set(z.enum(['a', 'b'])),
+
+              // Triplit-only types
+              relation: S.RelationById('linkedCollection', '$root_node_id'),
+            },
+          },
+        },
+      };
+
+      // const output = processSuperSchema(idTestSchema, zodAdapter);
       const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
 
-      const triplitSchemaJSONGenerated = output.triplitSchema;
+      const triplitSchemaJSONGenerated = output.triplitJsonSchema;
 
       const triplitSchemaJsObject = JSONToSchema(triplitSchemaJSONGenerated);
 
@@ -306,7 +380,7 @@ describe('Integration tests', () => {
       // debugger;
       const output = processSuperSchema(superSchemaComplexZodValid, zodAdapter);
 
-      const triplitSchemaJSONGenerated = output.triplitSchema;
+      const triplitSchemaJSONGenerated = output.triplitJsonSchema;
 
       const triplitSchemaJsObject = JSONToSchema(triplitSchemaJSONGenerated);
 
@@ -316,6 +390,8 @@ describe('Integration tests', () => {
         });
         // debugger;
       }).not.toThrow();
+
+      // TODO: run query and check result
     });
 
     test('generated Zod Schema accepted/parse-able by Zod', () => {
@@ -351,6 +427,8 @@ describe('Integration tests', () => {
         zodSchema.exampleCollection.safeParse(exampleDataComplex);
 
       expect(validationResult.success).toBe(true);
+
+      // TODO: compare parsed result, default fill in?
     });
 
     test('error out if unknown properties found', () => {

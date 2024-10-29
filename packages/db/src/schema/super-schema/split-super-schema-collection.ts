@@ -1,33 +1,8 @@
-import { ValidationLibAdapter } from './adapters/ValidationLibAdapter';
+import { ValidationLibAdapter } from './adapters/ValidationLibAdapter.js';
+import { getValidationOfSpecialId } from './generate-validation-id.js';
+import { acceptedCustomIdValues } from './process-super-schema.js';
 
-function isTriplitRelationField(value: any) {
-  // FIXME:
-  // 1. make this a general is TriplitField function
-  // 2. change relations to databaseSpecificTypes
-  // 3. process-super-schema > checkIdField adjust to handleIdField
-  //    - insert triplit String Field of 'nanoid' or 'uuid'
-  //    - add validation rules:
-
-  // NO OOO Wring , i can't do this like this, because id needs to be also
-  // augmented with validations
-  // so 'nanoid' -> S.String() has to be done
-  // in the generateTriplitSchema
-  // and in generateValidationSceham
-
-  //  but where do id = 'nanoid' goes? Into unknowns ?
-  //    do I need to add a new ids prop?
-  // pro: most obvious
-  // more code
-  // use unknowns
-  // not really unknown
-  // might error out before handling it
-  // new idsField it is
-
-  //  NEW
-  // 1. generateTriplitSchema
-  console.log('value', value);
-  return value?.validateTripleValue != null && value?.query != null;
-}
+export const CONTAINER_SYMBOL = Symbol('container');
 
 export function splitSuperSchemaCollection(
   superSchema: Record<string, any> = {},
@@ -43,26 +18,43 @@ export function splitSuperSchemaCollection(
   const validations: Record<string, ValidationTypes[keyof ValidationTypes]> =
     {};
   // const validations: Record<string, typeof validationAdapter.typeMapping> = {};
+  const ids: Record<string, any> = {};
   const relations: Record<string, any> = {};
   const unknowns: Record<string, any> = {};
   const permissions: Record<string, any> = superSchema?.permissions ?? {};
-  // const roles: Record<string, any> = superSchema?.roles ?? {};
 
   const schema = superSchema.schema ?? superSchema;
 
   for (const key in schema) {
     const value = schema[key];
 
+    const isIdWithSpecialValue =
+      key === 'id' && acceptedCustomIdValues.includes(value);
+    if (isIdWithSpecialValue) {
+      // ========================================================================
+      // if special id value, e.g. nanoid
+      // ========================================================================
+
+      // 1. add to ids for triplit schema building
+      ids[key] = value;
+
+      // 2. but also directly transform and add to validations
+      // because later on, the validations are already bundled in their container
+      // and it would take an extra method per validation lib to extend an validation object
+      // instead of doing it right now
+      validations[key] = getValidationOfSpecialId(value, validationAdapter);
+      continue;
+    }
+
     if (isTriplitRelationField(value)) {
       const triplitRelationDataJson = getTriplitRelationData(value);
       relations[key] = triplitRelationDataJson;
-      // Early return to avoid unnecessary checks
+      relations[key][CONTAINER_SYMBOL] = true;
       continue;
     }
 
     const isValidationLibType = validationAdapter.isOwnType(value);
     if (isValidationLibType) {
-      // is validation lib type
       validations[key] = value;
       continue;
     }
@@ -70,24 +62,21 @@ export function splitSuperSchemaCollection(
     const isContainer = isPojoWithoutMethods(value);
     if (isContainer) {
       // recursively unpack
-      const { relationObj, unknownsObj, validationObj } =
+      const { relationObj, unknownsObj, validationObj, idsObj } =
         splitSuperSchemaCollection(value, validationAdapter);
-      // FIXME:
-      // other level_2 etc properties are not passed to validionation
 
-      // validations[key] = validationObj;
       if (Object.keys(validationObj)?.length > 0)
         validations[key] = validationObj;
       if (Object.keys(relationObj)?.length > 0) relations[key] = relationObj;
       if (Object.keys(unknownsObj)?.length > 0) unknowns[key] = unknownsObj;
+      if (Object.keys(idsObj)?.length > 0) ids[key] = idsObj;
 
       continue;
       // addIfNotEmpty(validationObj, validations, key);
-      // addIfNotEmpty(relationObj, relations, key);
-      // addIfNotEmpty(unknownsObj, unknowns, key);
     }
 
-    // Fallback to catch unknowns
+    // Fallback
+    // catches unknown values
     unknowns[key] = value;
   }
 
@@ -96,11 +85,16 @@ export function splitSuperSchemaCollection(
       validations,
       validationAdapter.wrapInContainer
     ),
+    idsObj: ids,
     relationObj: relations,
     unknownsObj: unknowns,
     permissionsObj: permissions,
     // roles,
   };
+}
+
+function isTriplitRelationField(value: any) {
+  return value?.validateTripleValue != null && value?.query != null;
 }
 
 function wrapLevelIfNotEmpty(validationObj: any, wrapFunction: Function) {

@@ -3,7 +3,7 @@ export const expectedJsonOutputComplex = {
   properties: {
     id: {
       type: 'string',
-      pattern: '^[a-zA-Z0-9_-]{21}$',
+      // pattern: '^[a-zA-Z0-9_-]{21}$',
     },
     boolean: {
       type: 'boolean',
@@ -68,7 +68,7 @@ export const expectedJsonOutputComplex = {
       properties: {
         id: {
           type: 'string',
-          pattern: '^[a-zA-Z0-9_-]{21}$',
+          // pattern: '^[a-zA-Z0-9_-]{21}$',
         },
         boolean: {
           type: 'boolean',
@@ -133,7 +133,7 @@ export const expectedJsonOutputComplex = {
           properties: {
             id: {
               type: 'string',
-              pattern: '^[a-zA-Z0-9_-]{21}$',
+              // pattern: '^[a-zA-Z0-9_-]{21}$',
             },
             boolean: {
               type: 'boolean',
@@ -195,7 +195,6 @@ export const expectedJsonOutputComplex = {
             },
           },
           required: [
-            'id',
             'boolean',
             'number',
             'string',
@@ -211,7 +210,6 @@ export const expectedJsonOutputComplex = {
         },
       },
       required: [
-        'id',
         'boolean',
         'number',
         'string',
@@ -228,7 +226,6 @@ export const expectedJsonOutputComplex = {
     },
   },
   required: [
-    'id',
     'boolean',
     'number',
     'string',

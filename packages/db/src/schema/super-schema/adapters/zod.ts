@@ -15,7 +15,7 @@ import {
 } from 'zod';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ValidationLibAdapter } from './ValidationLibAdapter';
+import { ValidationLibAdapter } from './ValidationLibAdapter.js';
 
 //
 export const zodAdapter: ValidationLibAdapter = {
@@ -49,37 +49,47 @@ export const zodAdapter: ValidationLibAdapter = {
     const itemConstructorName = obj?.constructor?.name;
     return itemConstructorName.startsWith('Zod');
   },
-  // TODO: check if isString or isNullable is still needed ?
-  isStringType: function (obj: any) {
-    return obj instanceof ZodString;
-  },
-  isNullable: function (zObj: ZodTypeAny) {
-    // return obj instanceof ZodNullable;
-    return zObj.isNullable();
-  },
+
+  // isStringType: function (obj: any) {
+  //   return obj instanceof ZodString;
+  // },
+  // isNullable: function (zObj: ZodTypeAny) {
+  //   // return obj instanceof ZodNullable;
+  //   return zObj.isNullable();
+  // },
 
   // -------
 
-  // TODO: add nanoid, etc with this function and setting nullable:false. E.g. S.String({ default: function, nullable: false})
-  setDefaultFunction: function (
-    zObj: ZodTypeAny,
-    fnc: () => string
-  ): ZodTypeAny {
-    return zObj.default(fnc);
-  },
+  // setDefaultFunction: function (
+  //   zObj: ZodTypeAny,
+  //   fnc: () => string
+  // ): ZodTypeAny {
+  //   return zObj.default(fnc);
+  // },
 
-  setCustomValidationFunction: function (
-    zObj: ZodTypeAny,
-    validationFunction: (obj: any) => string
-  ): ZodTypeAny {
-    // NOTE: used to add a test to the generated validation lib
-    // setDefaultFunction to set validation lib independent random uuid as default
-    // customValidationFunction is used to generate testing code if uuid/nanoid etc.
-    return zObj.refine(validationFunction);
+  // setCustomValidationFunction: function (
+  //   zObj: ZodTypeAny,
+  //   validationFunction: (obj: any) => boolean
+  // ): ZodTypeAny {
+  //   // NOTE: used to add a test to the generated validation lib
+  //   // setDefaultFunction to set validation lib independent random uuid as default
+  //   // customValidationFunction is used to generate testing code if uuid/nanoid etc.
+  //   return zObj.refine(validationFunction);
+  // },
+
+  generateStringType: function (
+    defaultFunc: () => string,
+    validationFunc: () => boolean
+  ) {
+    // NOTE: used to translate special id values like "nanoid" for validation
+    const validationString = z
+      .string()
+      .default(defaultFunc)
+      .refine(validationFunc);
+    return validationString;
   },
 
   // isDefaultRandom: function (obj: ZodTypeAny) {
-  //   // TODO: check what if Default and nullable set, will it be able to detect this ?
   //   // NOTE
   //   // since zod saves all defaults as functions internally, we cant simply use
   //   // typeof default === 'function'
@@ -97,10 +107,11 @@ export const zodAdapter: ValidationLibAdapter = {
   // },
 
   jsonSchemaFrom: function (validationLibSchema: any) {
-    return zodToJsonSchema(validationLibSchema, {
+    const jsonSchema = zodToJsonSchema(validationLibSchema, {
       // de-ref all external/local and bring them inline
       $refStrategy: 'none',
-    }) as JSONSchema7;
+    });
+    return jsonSchema as JSONSchema7;
   },
 };
 
