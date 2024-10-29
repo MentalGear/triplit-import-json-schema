@@ -13,11 +13,12 @@ import {
   ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
+  SyncConnection,
 } from '@triplit/server-core';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
-import multer from 'multer';
+import multer, { MulterError } from 'multer';
 import * as Sentry from '@sentry/node';
 import {
   StoreKeys,
@@ -34,7 +35,10 @@ import { createRequire } from 'module';
 import { TriplitClient } from '@triplit/client';
 import PublicRouter from './routes/public.js';
 
-const upload = multer();
+const MB = 1024 * 1024;
+const MB_LIMIT = 100;
+
+const upload = multer({ limits: { fieldSize: MB * MB_LIMIT } });
 
 function parseClientMessage(
   message: WS.RawData
@@ -134,7 +138,7 @@ export function createServer(options?: ServerOptions) {
           ...(options?.dbOptions ?? {}),
         });
     // @ts-expect-error
-    const server = new TriplitServer(db);
+    const server = new TriplitServer(db, captureException);
     triplitServers.set(projectId, server);
     return server;
   }
@@ -230,9 +234,9 @@ export function createServer(options?: ServerOptions) {
   }
 
   wss.on('connection', async (socket: WS.WebSocket) => {
-    const session = socket.session;
+    const syncConnection = socket.syncConnection;
 
-    session!.addListener((messageType, payload) => {
+    syncConnection!.addListener((messageType, payload) => {
       sendMessage(socket, messageType, payload);
     });
 
@@ -254,11 +258,18 @@ export function createServer(options?: ServerOptions) {
         );
 
       logger.logMessage('received', parsedMessage);
-      session!.dispatchCommand(parsedMessage!);
+      syncConnection!.dispatchCommand(parsedMessage!);
     });
 
     socket.on('close', (code, reason) => {
-      session!.close();
+      if (!socket.syncConnection) return;
+
+      const triplitServer = getServer(
+        process.env.PROJECT_ID!,
+        options?.upstream
+      );
+      triplitServer.closeConnection(socket.syncConnection.options.clientId);
+
       // Should this use the closeSocket function?
       socket.close(code, reason);
     });
@@ -384,6 +395,24 @@ export function createServer(options?: ServerOptions) {
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
   });
+  // @ts-expect-error
+  app.use(function (err: unknown, req, res, next) {
+    console.error(err);
+    captureException(err);
+    if (err instanceof MulterError) {
+      if (err.code === 'LIMIT_FIELD_VALUE') {
+        return res
+          .status(400)
+          .json(
+            new TriplitError(
+              `Attempted to perform a bulk insert with a JSON payload that exceeded the maximum size of ${MB_LIMIT} MB`
+            ).toJSON()
+          );
+      }
+      return res.status(400).json(new TriplitError(err.message).toJSON());
+    }
+    next(err);
+  });
 
   return function startServer(port: number, onOpen?: (() => void) | undefined) {
     const server = app.listen(port, onOpen);
@@ -425,8 +454,7 @@ export function createServer(options?: ServerOptions) {
               clientSchemaHash: clientHash,
               syncSchema,
             });
-            // @ts-expect-error
-            socket.session = connection;
+            (socket as WS.WebSocket).syncConnection = connection;
             const schemaIncombaitility =
               await connection.isClientSchemaCompatible();
             if (schemaIncombaitility) {

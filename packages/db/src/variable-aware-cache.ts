@@ -2,14 +2,10 @@ import {
   FetchExecutionContext,
   FetchFromStorageOptions,
   getQueryVariables,
-  subscribeResultsAndTriples,
+  subscribeEntities,
 } from './collection-query.js';
 import { CollectionNameFromModels } from './db.js';
-import {
-  appendCollectionToId,
-  isValueVariable,
-  replaceVariable,
-} from './db-helpers.js';
+import { isValueVariable, replaceVariable } from './db-helpers.js';
 import { isFilterStatement } from './query.js';
 import { CollectionQuery, FilterStatement } from './query/types/index.js';
 import { getSchemaFromPath } from './schema/schema.js';
@@ -19,12 +15,13 @@ import type DB from './db.js';
 import { QueryCacheError } from './errors.js';
 import { TripleRow } from './triple-store-utils.js';
 import { QueryExecutionCache } from './query/execution-cache.js';
+import { Entity } from './entity.js';
 
 export class VariableAwareCache<Schema extends Models> {
   cache: Map<
     BigInt,
     {
-      results: Map<string, any>;
+      results: Map<string, Entity>;
       triples: TripleRow[];
     }
   >;
@@ -72,7 +69,7 @@ export class VariableAwareCache<Schema extends Models> {
   ) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
-      subscribeResultsAndTriples<Schema, Q>(
+      subscribeEntities<Schema, Q>(
         this.db.tripleStore,
         viewQuery,
         {
@@ -83,10 +80,12 @@ export class VariableAwareCache<Schema extends Models> {
             systemVars: this.db.systemVars,
           },
         },
-        ([results, triples]) => {
+        (entities) => {
           this.cache.set(id, {
-            results: new Map(results.map((e) => [e.id as string, e])),
-            triples: Array.from(triples.values()).flat(),
+            results: entities,
+            triples: Array.from(entities.values())
+              .map((entity) => entity.triples)
+              .flat(),
           });
           resolve();
         },
@@ -125,7 +124,7 @@ export class VariableAwareCache<Schema extends Models> {
       start = binarySearch(
         viewResultEntries,
         varValue,
-        ([, ent]) => ent[prop],
+        ([, ent]) => ent.data[prop],
         'start',
         (a, b) => {
           if (op === '<') return a < b ? 0 : 1;
@@ -138,7 +137,7 @@ export class VariableAwareCache<Schema extends Models> {
       end = binarySearch(
         viewResultEntries,
         varValue,
-        ([, ent]) => ent[prop],
+        ([, ent]) => ent.data[prop],
         'end',
         (a, b) => {
           if (op === '<') return a < b ? 0 : 1;
@@ -153,7 +152,7 @@ export class VariableAwareCache<Schema extends Models> {
       start = binarySearch(
         viewResultEntries,
         varValue,
-        ([, ent]) => ent[prop],
+        ([, ent]) => ent.data[prop],
         'start',
         (a, b) => {
           return a === b ? 0 : a < b ? -1 : 1;
@@ -162,7 +161,7 @@ export class VariableAwareCache<Schema extends Models> {
       end = binarySearch(
         viewResultEntries,
         varValue,
-        ([, ent]) => ent[prop],
+        ([, ent]) => ent.data[prop],
         'end',
         (a, b) => {
           return a === b ? 0 : a < b ? -1 : 1;
@@ -178,9 +177,7 @@ export class VariableAwareCache<Schema extends Models> {
         view,
         executionContext
       );
-      return resultEntries.map(([key]) =>
-        appendCollectionToId(query.collectionName, key)
-      );
+      return resultEntries.map(([key]) => key);
     }
     if (start == undefined || end == undefined) {
       throw new QueryCacheError(
@@ -201,9 +198,7 @@ export class VariableAwareCache<Schema extends Models> {
       view,
       executionContext
     );
-    return resultEntries.map(([key]) =>
-      appendCollectionToId(query.collectionName, key)
-    );
+    return resultEntries.map(([key]) => key);
   }
 
   queryToViews<
@@ -240,7 +235,7 @@ export class VariableAwareCache<Schema extends Models> {
 }
 
 function loadViewResultIntoExecutionCache<M extends Models>(
-  resultEntries: [string, any][],
+  resultEntries: [string, Entity][],
   query: CollectionQuery<M>,
   view: {
     results: Map<string, any>;
@@ -249,13 +244,11 @@ function loadViewResultIntoExecutionCache<M extends Models>(
   executionContext: FetchExecutionContext
 ) {
   resultEntries.forEach((entry) => {
-    const entityId = appendCollectionToId(query.collectionName, entry[0]);
-    const entity = entry[1];
-
+    const [entityId, entity] = entry;
     if (!executionContext.executionCache.hasData(entityId)) {
       executionContext.executionCache.setData(entityId, {
         entity: entity,
-        triples: view.triples.filter((t) => t.id === entityId),
+        // triples: view.triples.filter((t) => t.id === entityId),
       });
     }
 

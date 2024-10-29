@@ -1,5 +1,48 @@
 # @triplit/cli
 
+## 0.6.8
+
+### Patch Changes
+
+- 9197cc72: Manual version bump for CLI dependencies
+
+## 0.6.7
+
+### Patch Changes
+
+- 23b6171d: add support for webhooks
+- 15815dc2: Manual version bump for CLI dependencies
+
+## 0.6.6
+
+### Patch Changes
+
+- 3ca5265f: Manual version bump for CLI dependencies
+
+## 0.6.5
+
+### Patch Changes
+
+- 186174da: Manual version bump for CLI dependencies
+
+## 0.6.4
+
+### Patch Changes
+
+- f7ab3c65: Manual version bump for CLI dependencies
+
+## 0.6.3
+
+### Patch Changes
+
+- 3e96117b: Manual version bump for CLI dependencies
+
+## 0.6.2
+
+### Patch Changes
+
+- 3feda93e: Manual version bump for CLI dependencies
+
 ## 0.6.1
 
 ### Patch Changes

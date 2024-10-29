@@ -1,5 +1,78 @@
 # @triplit/server
 
+## 0.4.23
+
+### Patch Changes
+
+- Updated dependencies [3984bc94]
+- Updated dependencies [ccfa038c]
+- Updated dependencies [94417d39]
+  - @triplit/db@0.5.0
+  - @triplit/client@0.5.8
+  - @triplit/server-core@0.5.3
+
+## 0.4.22
+
+### Patch Changes
+
+- Updated dependencies [15815dc2]
+- Updated dependencies [23b6171d]
+  - @triplit/db@0.4.6
+  - @triplit/server-core@0.5.2
+  - @triplit/client@0.5.7
+
+## 0.4.21
+
+### Patch Changes
+
+- deacd21c: handle larger bulk inserts
+- Updated dependencies [deacd21c]
+- Updated dependencies [3ca5265f]
+  - @triplit/server-core@0.5.1
+  - @triplit/client@0.5.6
+
+## 0.4.20
+
+### Patch Changes
+
+- 186174da: Ensure sync connections are cleaned up on disconnect
+- Updated dependencies [c9fde067]
+- Updated dependencies [16687b5a]
+- Updated dependencies [c9fde067]
+- Updated dependencies [186174da]
+  - @triplit/db@0.4.5
+  - @triplit/client@0.5.5
+  - @triplit/server-core@0.5.0
+
+## 0.4.19
+
+### Patch Changes
+
+- Updated dependencies [f7ab3c65]
+  - @triplit/db@0.4.4
+  - @triplit/client@0.5.4
+  - @triplit/server-core@0.4.4
+
+## 0.4.18
+
+### Patch Changes
+
+- Updated dependencies [80a1d44b]
+  - @triplit/db@0.4.3
+  - @triplit/client@0.5.3
+  - @triplit/server-core@0.4.3
+
+## 0.4.17
+
+### Patch Changes
+
+- Updated dependencies [3feda93e]
+- Updated dependencies [c0365bd9]
+- Updated dependencies [5305bc0f]
+  - @triplit/client@0.5.2
+  - @triplit/db@0.4.2
+  - @triplit/server-core@0.4.2
+
 ## 0.4.16
 
 ### Patch Changes

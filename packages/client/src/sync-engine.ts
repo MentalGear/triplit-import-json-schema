@@ -76,6 +76,8 @@ export class SyncEngine {
       fulfilled: boolean;
       responseCallbacks: Set<(response: any) => void>;
       subCount: number;
+      hasSent: boolean;
+      abortController: AbortController;
     }
   > = new Map();
 
@@ -200,17 +202,10 @@ export class SyncEngine {
         fulfilled: false,
         responseCallbacks: new Set(),
         subCount: 0,
+        hasSent: false,
+        abortController: new AbortController(),
       });
-      this.getQueryState(id).then((queryState: Timestamp[]) => {
-        this.sendMessage({
-          type: 'CONNECT_QUERY',
-          payload: {
-            id: id,
-            params,
-            state: queryState,
-          },
-        });
-      });
+      this.connectQuery(id, params);
     }
     // Safely using query! here because we just set it
     const query = this.queries.get(id)!;
@@ -243,6 +238,33 @@ export class SyncEngine {
     };
   }
 
+  private connectQuery(queryId: string, params: CollectionQuery<any, any>) {
+    if (!this.queries.has(queryId)) return;
+
+    this.getQueryState(queryId).then((queryState: Timestamp[]) => {
+      const queryMetadata = this.queries.get(queryId);
+      if (
+        !queryMetadata ||
+        queryMetadata.hasSent ||
+        queryMetadata.abortController.signal.aborted
+      ) {
+        return;
+      }
+      const didSend = this.sendMessage({
+        type: 'CONNECT_QUERY',
+        payload: {
+          id: queryId,
+          params,
+          state: queryState,
+        },
+      });
+      if (didSend) {
+        queryMetadata.hasSent = true;
+      }
+      return didSend;
+    });
+  }
+
   private triplesToStateVector(triples: TripleRow[]): Timestamp[] {
     const clientClocks = new Map<string, number>();
     triples.forEach((t) => {
@@ -266,8 +288,14 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  disconnectQuery(id: string) {
-    this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
+  async disconnectQuery(id: string) {
+    if (!this.queries.has(id)) return;
+    const queryMetadata = this.queries.get(id)!;
+    if (queryMetadata.hasSent) {
+      this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
+    } else {
+      queryMetadata.abortController.abort();
+    }
     this.queries.delete(id);
   }
 
@@ -438,16 +466,7 @@ export class SyncEngine {
       if (hasOutboxTriples) this.signalOutboxTriples();
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
-        this.getQueryState(id).then((queryState) => {
-          this.sendMessage({
-            type: 'CONNECT_QUERY',
-            payload: {
-              id,
-              params: queryInfo.params,
-              state: queryState,
-            },
-          });
-        });
+        this.connectQuery(id, queryInfo.params);
       }
     });
 
@@ -579,6 +598,10 @@ export class SyncEngine {
    */
   private resetConnectionState() {
     this.awaitingAck = new Set();
+    for (const id of this.queries.keys()) {
+      const queryMetadata = this.queries.get(id);
+      queryMetadata!.hasSent = false;
+    }
   }
 
   /**
@@ -616,6 +639,7 @@ export class SyncEngine {
       // On a remote read error, default to disconnecting the query
       // You will still send triples, but you wont receive updates
       case 'QuerySyncError':
+        // TODO: surface this error to the user
         const queryKey = metadata?.queryKey;
         if (queryKey) this.disconnectQuery(queryKey);
     }
@@ -633,11 +657,16 @@ export class SyncEngine {
   }
 
   private sendMessage(message: ClientSyncMessage) {
-    this.transport.sendMessage(message);
-    this.logger.debug('sent', message);
-    for (const handler of this.messageSentSubscribers) {
-      handler(message);
+    const didSend = this.transport.sendMessage(message);
+
+    if (didSend) {
+      this.logger.debug('sent', message);
+      for (const handler of this.messageSentSubscribers) {
+        handler(message);
+      }
     }
+
+    return didSend;
   }
 
   /**
@@ -741,7 +770,7 @@ export class SyncEngine {
       const entities = constructEntities(triples);
       const schema = (await this.db.getSchema())?.collections;
       return [...entities].map(([, entity]) =>
-        convertEntityToJS(entity.data as any, schema)
+        convertEntityToJS(entity.data, schema)
       ) as Unalias<FetchResult<M, ToQuery<M, CQ>>>;
     } catch (e) {
       if (e instanceof TriplitError) throw e;

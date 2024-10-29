@@ -1,5 +1,58 @@
 # @triplit/svelte
 
+## 0.2.9
+
+### Patch Changes
+
+- 37b0d416: fixup initial fetching state
+
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [ccfa038c]
+  - @triplit/client@0.5.8
+
+## 0.2.7
+
+### Patch Changes
+
+- @triplit/client@0.5.7
+
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [3ca5265f]
+  - @triplit/client@0.5.6
+
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies [16687b5a]
+- Updated dependencies [c9fde067]
+  - @triplit/client@0.5.5
+
+## 0.2.4
+
+### Patch Changes
+
+- @triplit/client@0.5.4
+
+## 0.2.3
+
+### Patch Changes
+
+- @triplit/client@0.5.3
+
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [3feda93e]
+  - @triplit/client@0.5.2
+
 ## 0.2.1
 
 ### Patch Changes

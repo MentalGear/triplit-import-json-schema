@@ -1,4 +1,4 @@
-import { timestampedSchemaToSchema } from './schema/schema.js';
+import { schemaEntityToSchemaObject } from './schema/schema.js';
 import { schemaToJSON } from './schema/export/index.js';
 import {
   UpdateTypeFromModel,
@@ -14,8 +14,9 @@ import CollectionQueryBuilder, {
   initialFetchExecutionContext,
   subscribe,
   subscribeTriples,
+  loadQuery,
 } from './collection-query.js';
-import { Entity, constructEntity, updateEntity } from './query.js';
+import { COLLECTION_ATTRIBUTE, Entity, updateEntity } from './entity.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, TriplitError } from './errors.js';
 import { Clock } from './clocks/clock.js';
@@ -29,7 +30,7 @@ import {
   logSchemaChangeViolations,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
-import { copyHooks } from './utils.js';
+import { copyDBHooks } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { ClearOptions, TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/logger';
@@ -60,6 +61,11 @@ import {
   DropRulePayload,
   SetAttributeOptionalPayload,
 } from './db/types/operations.js';
+import { generatePsuedoRandomId } from './utils/random.js';
+import {
+  getResultTriplesFromContext,
+  getSyncTriplesFromContext,
+} from './query/result-parsers.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 export interface TransactOptions {
@@ -104,6 +110,10 @@ export interface DBFetchOptions {
   skipIndex?: boolean;
 }
 
+interface TriplesFetchOptions extends DBFetchOptions {
+  sync?: boolean;
+}
+
 export function ruleToTuple(
   collectionName: string,
   ruleType: keyof CollectionRules<any, any>,
@@ -131,23 +141,25 @@ type TxOutput<Output> = {
   output: Output | undefined;
 };
 
-type TriggerWhen =
-  | 'afterCommit'
-  | 'afterDelete'
-  | 'afterInsert'
-  | 'afterUpdate'
-  | 'beforeCommit'
-  | 'beforeDelete'
-  | 'beforeInsert'
-  | 'beforeUpdate';
+const TRIGGER_WHEN = [
+  'afterCommit',
+  'afterDelete',
+  'afterInsert',
+  'afterUpdate',
+  'beforeCommit',
+  'beforeDelete',
+  'beforeInsert',
+  'beforeUpdate',
+] as const;
 
+type TriggerWhen = (typeof TRIGGER_WHEN)[number];
 // TODO: type this better
-export type EntityOpSet = OpSet<any>;
+export type EntityOpSet = OpSet<[string, any]>;
 
 export type OpSet<T> = {
-  inserts: [string, T][];
-  updates: [string, T][];
-  deletes: [string, T][];
+  inserts: T[];
+  updates: T[];
+  deletes: T[];
 };
 
 interface AfterCommitOptions<M extends Models> {
@@ -277,33 +289,38 @@ type TriggerCallback =
   | BeforeUpdateCallback<any, any>
   | BeforeDeleteCallback<any, any>;
 
+export type TriggerMap<
+  C extends TriggerCallback,
+  O extends TriggerOptions
+> = Map<string, [C, O]>;
+
 export type DBHooks<M extends Models> = {
-  afterCommit: [AfterCommitCallback<M>, AfterCommitOptions<M>][];
-  afterInsert: [
+  afterCommit: TriggerMap<AfterCommitCallback<M>, AfterCommitOptions<M>>;
+  afterInsert: TriggerMap<
     AfterInsertCallback<M, CollectionNameFromModels<M>>,
     AfterInsertOptions<M, CollectionNameFromModels<M>>
-  ][];
-  afterUpdate: [
+  >;
+  afterUpdate: TriggerMap<
     AfterInsertCallback<M, CollectionNameFromModels<M>>,
     AfterUpdateOptions<M, CollectionNameFromModels<M>>
-  ][];
-  afterDelete: [
+  >;
+  afterDelete: TriggerMap<
     AfterDeleteCallback<M, CollectionNameFromModels<M>>,
     AfterDeleteOptions<M, CollectionNameFromModels<M>>
-  ][];
-  beforeCommit: [BeforeCommitCallback<M>, BeforeCommitOptions<M>][];
-  beforeInsert: [
+  >;
+  beforeCommit: TriggerMap<BeforeCommitCallback<M>, BeforeCommitOptions<M>>;
+  beforeInsert: TriggerMap<
     BeforeInsertCallback<M, CollectionNameFromModels<M>>,
     BeforeInsertOptions<M, CollectionNameFromModels<M>>
-  ][];
-  beforeUpdate: [
+  >;
+  beforeUpdate: TriggerMap<
     BeforeUpdateCallback<M, CollectionNameFromModels<M>>,
     BeforeUpdateOptions<M, CollectionNameFromModels<M>>
-  ][];
-  beforeDelete: [
+  >;
+  beforeDelete: TriggerMap<
     BeforeDeleteCallback<M, CollectionNameFromModels<M>>,
     BeforeDeleteOptions<M, CollectionNameFromModels<M>>
-  ][];
+  >;
 };
 
 export type SystemVariables = {
@@ -322,22 +339,30 @@ export default class DB<M extends Models = Models> {
   private isSchemaInitialized: boolean = false;
   ready: Promise<void>;
 
-  _schema?: Entity; // Timestamped Object
+  _schema?: Entity;
   schema?: StoreSchema<M>;
   private onSchemaChangeCallbacks: Set<SchemaChangeCallback<M>>;
 
   private hooks: DBHooks<M> = {
-    afterCommit: [],
-    afterInsert: [],
-    afterUpdate: [],
-    afterDelete: [],
-    beforeCommit: [],
-    beforeInsert: [],
-    beforeUpdate: [],
-    beforeDelete: [],
+    afterCommit: new Map(),
+    afterInsert: new Map(),
+    afterUpdate: new Map(),
+    afterDelete: new Map(),
+    beforeCommit: new Map(),
+    beforeInsert: new Map(),
+    beforeUpdate: new Map(),
+    beforeDelete: new Map(),
   };
   private _pendingSchemaRequest: Promise<void> | null;
   logger: Logger;
+  public activeSubscriptions: Map<
+    string,
+    {
+      query: CollectionQuery<M>;
+      unsubscribe: () => Promise<void>;
+      updateVariables: () => Promise<void>;
+    }
+  > = new Map();
 
   constructor({
     schema,
@@ -468,7 +493,7 @@ export default class DB<M extends Models = Models> {
 
         // Update schema
         updateEntity(this._schema!, schemaTriples);
-        const newSchema = timestampedSchemaToSchema(
+        const newSchema = schemaEntityToSchemaObject(
           this._schema!.data
         ) as StoreSchema<M>;
 
@@ -480,80 +505,55 @@ export default class DB<M extends Models = Models> {
     );
   }
 
-  addTrigger(on: AfterCommitOptions<M>, callback: AfterCommitCallback<M>): void;
+  addTrigger(
+    on: AfterCommitOptions<M>,
+    callback: AfterCommitCallback<M>
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: AfterInsertOptions<M, CN>,
     callback: AfterInsertCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: AfterUpdateOptions<M, CN>,
     callback: AfterUpdateCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: AfterDeleteOptions<M, CN>,
     callback: AfterDeleteCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger(
     on: BeforeCommitOptions<M>,
     callback: BeforeCommitCallback<M>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: BeforeInsertOptions<M, CN>,
     callback: BeforeInsertCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: BeforeUpdateOptions<M, CN>,
     callback: BeforeUpdateCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: BeforeDeleteOptions<M, CN>,
     callback: BeforeDeleteCallback<M, CN>
-  ): void;
-  addTrigger(on: TriggerOptions, callback: TriggerCallback) {
-    switch (on.when) {
-      case 'afterCommit':
-        this.hooks.afterCommit.push([callback as AfterCommitCallback<M>, on]);
-        break;
-      case 'afterInsert':
-        this.hooks.afterInsert.push([
-          callback as AfterInsertCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'afterUpdate':
-        this.hooks.afterUpdate.push([
-          callback as AfterUpdateCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'afterDelete':
-        this.hooks.afterDelete.push([
-          callback as AfterDeleteCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'beforeCommit':
-        this.hooks.beforeCommit.push([callback as BeforeCommitCallback<M>, on]);
-        break;
-      case 'beforeInsert':
-        this.hooks.beforeInsert.push([
-          callback as BeforeInsertCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'beforeUpdate':
-        this.hooks.beforeUpdate.push([
-          callback as BeforeUpdateCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'beforeDelete':
-        this.hooks.beforeDelete.push([
-          callback as BeforeDeleteCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
+  ): string;
+  addTrigger(on: TriggerOptions, callback: TriggerCallback): string {
+    if (!TRIGGER_WHEN.includes(on.when)) {
+      throw new Error(`Invalid trigger when: ${on.when}`);
     }
+    const id = generatePsuedoRandomId();
+    // @ts-expect-error
+    this.hooks[on.when].set(id, [callback, on]);
+    return id;
+  }
+
+  removeTrigger(id: string): boolean {
+    for (const when of TRIGGER_WHEN) {
+      if (this.hooks[when].delete(id)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   withSessionVars(variables: Record<string, any>): DB<M> {
@@ -567,14 +567,10 @@ export default class DB<M extends Models = Models> {
 
   private async loadSchemaData() {
     const triples = await getSchemaTriples(this.tripleStore);
-
-    this._schema =
-      constructEntity(triples, appendCollectionToId('_metadata', '_schema')) ??
-      new Entity();
-
+    this._schema = new Entity(triples);
     // Schema should remain undefined if no triples
     if (triples.length) {
-      this.schema = timestampedSchemaToSchema(
+      this.schema = schemaEntityToSchemaObject(
         this._schema.data
       ) as StoreSchema<M>;
     }
@@ -611,7 +607,7 @@ export default class DB<M extends Models = Models> {
     );
     try {
       const resp = await this.tripleStore.transact(async (tripTx) => {
-        const tx = new DBTransaction<M>(this, tripTx, copyHooks(this.hooks), {
+        const tx = new DBTransaction<M>(this, tripTx, copyDBHooks(this.hooks), {
           schema,
           skipRules: options.skipRules,
           logger: this.logger.scope('tx'),
@@ -630,6 +626,7 @@ export default class DB<M extends Models = Models> {
   }
 
   updateGlobalVariables(variables: Record<string, any>) {
+    this.activeSubscriptions.forEach((sub) => sub.updateVariables());
     this.systemVars.global = { ...this.systemVars.global, ...variables };
   }
 
@@ -637,10 +634,6 @@ export default class DB<M extends Models = Models> {
     const { successful, issues } = await overrideStoredSchema(this, schema);
     logSchemaChangeViolations(successful, issues, this.logger);
     return { successful, issues };
-  }
-
-  async echoQuery<Q extends SchemaQueries<M>>(query: Q) {
-    return query;
   }
 
   async fetch<Q extends SchemaQueries<M>>(
@@ -662,12 +655,13 @@ export default class DB<M extends Models = Models> {
     const noCache =
       options.noCache === undefined ? DEFAULT_CACHE_DISABLED : options.noCache;
 
-    const { results } = await fetch<M, Q>(
+    const executionContext = initialFetchExecutionContext();
+    const results = await fetch<M, Q>(
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
       fetchQuery,
-      initialFetchExecutionContext(),
+      executionContext,
       {
         schema,
         cache: noCache ? undefined : this.cache,
@@ -689,7 +683,7 @@ export default class DB<M extends Models = Models> {
 
   async fetchTriples<Q extends SchemaQueries<M>>(
     query: Q,
-    options: DBFetchOptions = {}
+    options: TriplesFetchOptions = {}
   ) {
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
@@ -701,26 +695,40 @@ export default class DB<M extends Models = Models> {
         skipRules: options.skipRules,
       }
     );
-    return [
-      ...(
-        await fetch<M, Q>(
-          options.scope
-            ? this.tripleStore.setStorageScope(options.scope)
-            : this.tripleStore,
+    const executionContext = initialFetchExecutionContext();
+    const entityOrder = await loadQuery<M, Q>(
+      options.scope
+        ? this.tripleStore.setStorageScope(options.scope)
+        : this.tripleStore,
+      fetchQuery,
+      executionContext,
+      {
+        schema: schema,
+        stateVector: options.stateVector,
+        skipRules: options.skipRules,
+        session: {
+          systemVars: this.systemVars,
+          roles: this.sessionRoles,
+        },
+      }
+    );
+
+    if (options.sync) {
+      return Array.from(
+        getSyncTriplesFromContext<M, Q>(
           fetchQuery,
-          initialFetchExecutionContext(),
-          {
-            schema: schema,
-            stateVector: options.stateVector,
-            skipRules: options.skipRules,
-            session: {
-              systemVars: this.systemVars,
-              roles: this.sessionRoles,
-            },
-          }
-        )
-      ).triples,
-    ];
+          entityOrder,
+          executionContext
+        ).values()
+      ).flat();
+    }
+    return Array.from(
+      getResultTriplesFromContext<M, Q>(
+        fetchQuery,
+        entityOrder,
+        executionContext
+      ).values()
+    ).flat();
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
@@ -792,7 +800,7 @@ export default class DB<M extends Models = Models> {
         options.noCache === undefined
           ? DEFAULT_CACHE_DISABLED
           : options.noCache;
-      const unsub = subscribe<M, Q>(
+      const subscription = subscribe<M, Q>(
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,
@@ -820,17 +828,33 @@ export default class DB<M extends Models = Models> {
           onError?.(...args);
         }
       );
-      return unsub;
+      return subscription;
     };
 
-    const unsubPromise = startSubscription().catch(onError);
+    const subscriptionPromise = startSubscription().catch(onError);
 
+    // @ts-expect-error
+    const queryId = query.traceId ?? generatePsuedoRandomId();
+    this.activeSubscriptions.set(queryId, {
+      query,
+      unsubscribe: async () => {
+        // Immediately set unsubscribed to true to prevent any new results from being processed
+        unsubscribed = true;
+        this.logger.debug('subscribe END', { query });
+        const subscription = await subscriptionPromise;
+        this.activeSubscriptions.delete(queryId);
+        return subscription && subscription.unsubscribe();
+      },
+      updateVariables: async () => {
+        const subscription = await subscriptionPromise;
+        return subscription && (await subscription.updateVars(this.systemVars));
+      },
+    });
+
+    // Maybe return an object like { unsubscribe: () => void, updateVariables: () => void } but for now
+    // keep API backwards compatible
     return async () => {
-      // Immediately set unsubscribed to true to prevent any new results from being processed
-      unsubscribed = true;
-      this.logger.debug('subscribe END', { query });
-      const unsub = await unsubPromise;
-      return unsub?.();
+      return this.activeSubscriptions.get(queryId)?.unsubscribe();
     };
   }
 
@@ -965,7 +989,7 @@ export default class DB<M extends Models = Models> {
     // is just the name of the collection it belongs to
     // e.g. { id: '123', name: 'alice', _collection: 'users'}
     const collectionMetaTriples = await genToArr(
-      this.tripleStore.findByAttribute(['_collection'])
+      this.tripleStore.findByAttribute(COLLECTION_ATTRIBUTE)
     );
 
     const stats = new Map();

@@ -1,5 +1,23 @@
 # @triplit/tuple-database
 
+## 2.2.30
+
+### Patch Changes
+
+- 9197cc72: update remeda package
+
+## 2.2.29
+
+### Patch Changes
+
+- 15815dc2: Cancel transaction on failure
+
+## 2.2.28
+
+### Patch Changes
+
+- 3e96117b: rm logs
+
 ## 2.2.27
 
 ### Patch Changes

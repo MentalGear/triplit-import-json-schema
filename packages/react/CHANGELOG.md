@@ -1,5 +1,53 @@
 # @triplit/react
 
+## 0.4.8
+
+### Patch Changes
+
+- d1ceedcb: fixup loadMore function to accept page size parameter in useInfiniteQuery
+- Updated dependencies [ccfa038c]
+  - @triplit/client@0.5.8
+
+## 0.4.7
+
+### Patch Changes
+
+- @triplit/client@0.5.7
+
+## 0.4.6
+
+### Patch Changes
+
+- Updated dependencies [3ca5265f]
+  - @triplit/client@0.5.6
+
+## 0.4.5
+
+### Patch Changes
+
+- Updated dependencies [16687b5a]
+- Updated dependencies [c9fde067]
+  - @triplit/client@0.5.5
+
+## 0.4.4
+
+### Patch Changes
+
+- @triplit/client@0.5.4
+
+## 0.4.3
+
+### Patch Changes
+
+- @triplit/client@0.5.3
+
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [3feda93e]
+  - @triplit/client@0.5.2
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,5 +1,60 @@
 # @triplit/client
 
+## 0.5.8
+
+### Patch Changes
+
+- ccfa038c: Add method subscribeBackground() for sync in background
+- Updated dependencies [3984bc94]
+- Updated dependencies [94417d39]
+  - @triplit/db@0.5.0
+
+## 0.5.7
+
+### Patch Changes
+
+- Updated dependencies [15815dc2]
+- Updated dependencies [23b6171d]
+  - @triplit/db@0.4.6
+
+## 0.5.6
+
+### Patch Changes
+
+- 3ca5265f: Fix query syncin race condition that occured with React Strict mode's double rendering behavior
+
+## 0.5.5
+
+### Patch Changes
+
+- 16687b5a: Fix race condition with rapid query disconnects
+- c9fde067: fixup bug causing duplicate query tracking when syncStatus is assigned
+- Updated dependencies [c9fde067]
+  - @triplit/db@0.4.5
+
+## 0.5.4
+
+### Patch Changes
+
+- Updated dependencies [f7ab3c65]
+  - @triplit/db@0.4.4
+
+## 0.5.3
+
+### Patch Changes
+
+- Updated dependencies [80a1d44b]
+  - @triplit/db@0.4.3
+
+## 0.5.2
+
+### Patch Changes
+
+- 3feda93e: export all client types
+- Updated dependencies [c0365bd9]
+- Updated dependencies [5305bc0f]
+  - @triplit/db@0.4.2
+
 ## 0.5.1
 
 ### Patch Changes

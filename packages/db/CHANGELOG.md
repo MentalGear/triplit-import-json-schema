@@ -1,5 +1,53 @@
 # @triplit/db
 
+## 0.5.0
+
+### Minor Changes
+
+- 94417d39: Treat multiple matching roles as a union of permission filters rather than an intersection
+
+### Patch Changes
+
+- 3984bc94: Fix bug where results are not properly backfilled when syncing for queries with limits
+- Updated dependencies [9197cc72]
+  - @triplit/tuple-database@2.2.30
+
+## 0.4.6
+
+### Patch Changes
+
+- 15815dc2: fixup reactivity memory leak
+- 23b6171d: add support for webhooks
+- Updated dependencies [15815dc2]
+  - @triplit/tuple-database@2.2.29
+
+## 0.4.5
+
+### Patch Changes
+
+- c9fde067: refire subscriptions on global var changes, add tracking of active subscriptions
+
+## 0.4.4
+
+### Patch Changes
+
+- f7ab3c65: bug fix for cross-client deletes
+
+## 0.4.3
+
+### Patch Changes
+
+- 80a1d44b: fix lazyScan bug with multiple stores
+- Updated dependencies [3e96117b]
+  - @triplit/tuple-database@2.2.28
+
+## 0.4.2
+
+### Patch Changes
+
+- c0365bd9: Fixup triple dupes bug
+- 5305bc0f: add triplitSchemaToJsonSchema utility
+
 ## 0.4.1
 
 ### Patch Changes
