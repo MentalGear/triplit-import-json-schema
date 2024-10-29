@@ -1,13 +1,11 @@
 import { JSONSchema7 } from 'json-schema';
 import { invertTransformations } from './invert-transform-functions.js';
-import {
-  CollectionDefinition,
-  SchemaDefinition,
-} from 'packages/db/src/data-types/serialization.js';
+import { CollectionDefinition, SchemaDefinition } from '@triplit/db';
+
 import { JSONToSchema } from '../../schema.js';
 
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
+const Ajv = require('ajv');
+const addFormats = require('ajv-formats');
 import { RolePermissions } from '../../types/models.js';
 
 const ajv = new Ajv({
@@ -48,7 +46,7 @@ export function triplitJsonFromJsonSchema(
       throw new Error('Input is not of valid JsonSchema format');
   }
 
-  const collections: Record<string, any> = {};
+  const collections: Record<string, CollectionDefinition> = {};
 
   for (const [collectionName, collectionSchema] of Object.entries(
     jsonSchemaCopy.properties || {}
@@ -129,10 +127,7 @@ export function triplitJsonFromJsonSchemaSingleCollection(
   return triplitSchemaFromJson?.collections?.collectionSingle;
 }
 
-function validateTriplitSchema(triplitJsonSchema: {
-  collections: Record<string, any>;
-  version: number;
-}) {
+function validateTriplitSchema(triplitJsonSchema: SchemaDefinition) {
   // as recommended by triplit team member
   // to validate, try converting into a triplit JS Object
   try {
