@@ -1,5 +1,20 @@
 # @triplit/client
 
+## 0.5.10
+
+### Patch Changes
+
+- 3d5e879d: Pass remote sync errors to subscription error handlers
+- Updated dependencies [aca9cf75]
+- Updated dependencies [3d5e879d]
+  - @triplit/db@0.5.2
+
+## 0.5.9
+
+### Patch Changes
+
+- @triplit/db@0.5.1
+
 ## 0.5.8
 
 ### Patch Changes
