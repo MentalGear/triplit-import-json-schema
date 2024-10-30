@@ -6,6 +6,7 @@ import {
 } from 'packages/db/src/schema/types';
 
 import { ValidationLibAdapter } from './adapters/ValidationLibAdapter';
+import { acceptedCustomIdValues } from './process-super-schema.ts';
 
 // FIXME: get correct types
 type ValidationLibTypes =
@@ -19,15 +20,17 @@ export type SuperSchema = {
   roles?: Roles;
 };
 
-enum keyPossibilities {
-  string,
-  'id',
-}
+const specialIdValues = typeof acceptedCustomIdValues;
+
+// enum keyPossibilities { // Removed enum
+//   string,
+//   'id',
+// }
 
 export type SuperSchemaCollection<T extends SchemaConfig = SchemaConfig> = {
-  // TODO: add to require at least id field ?
   schema: {
-    [key in keyPossibilities]: ValidationLibTypes | QueryAttributeDefinition;
+    id: ValidationLibTypes | QueryAttributeDefinition | specialIdValues; // 'id' is now required
+    [key: string]: ValidationLibTypes | QueryAttributeDefinition; // other keys are optional
   };
   // TODO: possible to not use <any, any> here?
   /**

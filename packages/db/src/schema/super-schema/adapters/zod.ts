@@ -38,17 +38,28 @@ export const zodAdapter: ValidationLibAdapter = {
   //   someDateWithNowDefault: 'now', // triplitSchemaToJsonSchema can take care, or is there a better solution?
   // },
 
-  wrapInContainer: function (obj: any) {
+  wrapInContainer: (obj: any) => {
     return z.object(obj);
   },
-  isOwnContainer: function (obj: any) {
+  isOwnContainer: (obj: any) => {
     const itemConstructorName = obj?.constructor?.name;
     return itemConstructorName.startsWith('ZodObject');
   },
-  isOwnType: function (obj: any) {
+  isOwnType: (obj: any) => {
     const itemConstructorName = obj?.constructor?.name;
     return itemConstructorName.startsWith('Zod');
   },
+
+  generateStringType: (defaultFunc, validationFunc) => {
+    // NOTE: used to translate special id values like "nanoid" for validation
+    const validationString = z
+      .string()
+      .default(defaultFunc)
+      .refine(validationFunc);
+    return validationString;
+  },
+
+  // TODO: delete unnecessary old code
 
   // isStringType: function (obj: any) {
   //   return obj instanceof ZodString;
@@ -76,18 +87,6 @@ export const zodAdapter: ValidationLibAdapter = {
   //   // customValidationFunction is used to generate testing code if uuid/nanoid etc.
   //   return zObj.refine(validationFunction);
   // },
-
-  generateStringType: function (
-    defaultFunc: () => string,
-    validationFunc: () => boolean
-  ) {
-    // NOTE: used to translate special id values like "nanoid" for validation
-    const validationString = z
-      .string()
-      .default(defaultFunc)
-      .refine(validationFunc);
-    return validationString;
-  },
 
   // isDefaultRandom: function (obj: ZodTypeAny) {
   //   // NOTE

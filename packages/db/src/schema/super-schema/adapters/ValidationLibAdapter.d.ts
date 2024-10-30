@@ -24,13 +24,13 @@ export interface ValidationLibAdapter {
   wrapInContainer: (obj: any) => any;
   isOwnContainer: (obj: any) => boolean;
   isOwnType: (obj: any) => boolean;
-  isDefaultRandom: (obj: any) => boolean;
   generateStringType: (
-    defaultFunc: () => string,
-    validationFunc: () => boolean
+    defaultFunc: () => any,
+    validationFunc: (str: string) => boolean
   ) => any;
   jsonSchemaFrom: (obj: any) => JSONSchema7;
 
+  // isDefaultRandom: (obj: any) => boolean;
   // isStringType: (obj: any) => boolean;
   // isNullable: (obj: any) => boolean;
   // setDefaultFunction: (obj: any, defaultFunc: () => string) => any;

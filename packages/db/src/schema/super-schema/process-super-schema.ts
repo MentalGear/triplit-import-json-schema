@@ -94,6 +94,7 @@ function checkTopLevelIdField(collection: SuperSchemaCollection) {
   // so we only check the top level, not sub levels
 
   const collectionSchema = collection.schema;
+
   if ('id' in collectionSchema === false) {
     throw new Error(
       "Triplit requires an id for each top-level schema - please add an 'id' field of type 'nanoid' or uuidV4"
@@ -101,7 +102,7 @@ function checkTopLevelIdField(collection: SuperSchemaCollection) {
     );
   }
 
-  const idValue = String(collectionSchema?.id);
+  const idValue = collectionSchema?.id ?? '';
   if (acceptedCustomIdValues.includes(idValue) === false) {
     throw new Error(
       `Top-level id fields can only be set to ${acceptedCustomIdValues.join(
