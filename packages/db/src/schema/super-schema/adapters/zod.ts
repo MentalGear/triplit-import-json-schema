@@ -17,7 +17,6 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ValidationLibAdapter } from './ValidationLibAdapter.js';
 
-//
 export const zodAdapter: ValidationLibAdapter = {
   // only used for type-checking
   typeMapping: {
@@ -46,8 +45,10 @@ export const zodAdapter: ValidationLibAdapter = {
     return itemConstructorName.startsWith('ZodObject');
   },
   isOwnType: (obj: any) => {
-    const itemConstructorName = obj?.constructor?.name;
-    return itemConstructorName.startsWith('Zod');
+    const typeName = obj?._def?.typeName ?? '';
+    return typeName.startsWith('Zod');
+    // not working
+    // const isZodType = obj instanceof z.ZodType;
   },
 
   generateStringType: (defaultFunc, validationFunc) => {
@@ -113,32 +114,3 @@ export const zodAdapter: ValidationLibAdapter = {
     return jsonSchema as JSONSchema7;
   },
 };
-
-// corrections: [
-//   {
-//     purpose: 'transform arrays to sets',
-
-//     validationSchema(obj: ZodType) {
-//       if (obj instanceof z.ZodArray === false) return;
-//       // simulate set type (all items are unique)
-//       obj.refine((items) => new Set(items).size === items.length, {
-//         message: 'All items must be unique, no duplicate values allowed',
-//       });
-//       // print a note to the user
-//       console.warn(`
-//       ------------------------------------
-//       ALIGNMENT NOTICE:
-//       - Zod (pre-v.4) does not have a native Set Type.
-//       - Triplit's database schema only provides Set types for lists (for collaboration and distributed syncing).
-//       AUTOMATIC RESOLUTION:
-//       > To align validation and database schemas, a uniqueness check is added (using .refine) to any array type in the generated Zod schema.
-//       ------------------------------------
-//       `);
-//     },
-
-//     jsonSchema(obj) {
-//       // set all arrays to sets
-//       if (obj.type === 'array') obj.uniqueItems = true;
-//     },
-//   },
-// ],
