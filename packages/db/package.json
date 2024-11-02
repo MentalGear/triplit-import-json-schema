@@ -3,7 +3,7 @@
   "repository": "github:aspen-cloud/triplit",
   "homepage": "https://triplit.dev",
   "license": "AGPL-3.0-only",
-  "version": "0.5.2",
+  "version": "0.5.4",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -80,6 +80,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "idb": "^7.1.1",
+    "mnemonist": "0.40.0-rc1",
     "nanoid": "^3.0.0",
     "pino": "^8.11.0"
   }

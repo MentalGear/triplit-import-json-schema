@@ -6,6 +6,7 @@ import { Clock } from './clock.js';
 export class MemoryClock implements Clock {
   clientId: string;
   tick: number;
+  clockReady: Promise<void> = Promise.resolve();
   constructor({ clientId, tick }: { clientId?: string; tick?: number } = {}) {
     this.clientId = clientId ?? nanoid();
     this.tick = tick ?? 0;
@@ -14,7 +15,7 @@ export class MemoryClock implements Clock {
   async assignToStore(store: TripleStore): Promise<void> {
     const maxTs = await store.findMaxClientTimestamp(this.clientId);
     if (maxTs) this.setTick(maxTs[0]);
-    store.onInsert((inserts) => {
+    store.afterCommit((inserts) => {
       const allTriples = Object.values(inserts).flat();
       allTriples.forEach(({ timestamp }) => {
         if (this.tick < timestamp[0]) this.setTick(timestamp[0]);
