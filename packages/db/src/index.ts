@@ -94,4 +94,7 @@ export * from './schema/export/index.js';
 export * from './schema/import/index.js';
 export * from './utils/generator.js';
 
-// export { processSuperSchema } from './schema/super-schema/process-super-schema.js';
+// Super Schema Exports
+export { processSuperSchema } from './schema/super-schema/process-super-schema.js';
+export { zodAdapter } from './schema/super-schema/adapters/zod.js';
+export type { SuperSchema } from 'packages/db/src/schema/super-schema/SuperSchema.js';

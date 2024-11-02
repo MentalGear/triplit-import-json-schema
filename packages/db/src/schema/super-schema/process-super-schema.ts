@@ -4,12 +4,13 @@ import { SuperSchema, SuperSchemaCollection } from './SuperSchema.js';
 import { ZodObject, ZodType } from 'zod';
 import { JSONSchemaType } from 'ajv';
 import { SchemaDefinition } from '../types/serialization.js';
-import { Models, Roles } from '../types/index.js';
+import { Models, Roles, StoreSchema } from '../types/index.js';
 
 import {
   generateTriplitJsonCollection,
   generateTriplitJson,
 } from './generate-triplit-format.js';
+import { JSONToSchema } from '../schema.js';
 
 type CollectionData = {
   validations: Record<string, ZodType>;
@@ -19,7 +20,8 @@ type CollectionData = {
 };
 
 type SuperSchemaResult = {
-  triplitJsonSchema: SchemaDefinition;
+  triplitSchema: StoreSchema<Models>;
+  jsonTriplitSchema: SchemaDefinition;
   validationSchema: any; // TODO: try to infer types from current ValidationAdapter
   roles: Roles;
 };
@@ -32,7 +34,7 @@ export function processSuperSchema(
   const collections = superSchema.collections;
 
   const allValidationSchemas: Record<string, any> = {};
-  const allTriplitJsonSchemas: Record<string, any> = {};
+  const allJsonTriplitSchemas: Record<string, any> = {};
 
   for (const [collectionKey, collectionData] of Object.entries(collections)) {
     // id field handling
@@ -46,7 +48,7 @@ export function processSuperSchema(
     allValidationSchemas[collectionKey] = validations;
 
     // TRIPLIT
-    allTriplitJsonSchemas[collectionKey] = generateTriplitJsonCollection(
+    allJsonTriplitSchemas[collectionKey] = generateTriplitJsonCollection(
       validations,
       relations,
       permissions,
@@ -56,12 +58,18 @@ export function processSuperSchema(
   }
 
   const validationSchema = allValidationSchemas;
-  const triplitJsonSchema = generateTriplitJson(allTriplitJsonSchemas);
+  const jsonTriplitSchema = generateTriplitJson(allJsonTriplitSchemas);
+  const triplitSchema = JSONToSchema(jsonTriplitSchema);
+  if (!triplitSchema)
+    throw new Error(
+      'triplitSchema couldnt be generated from jsonTriplitSchema'
+    );
 
   return {
-    triplitJsonSchema,
+    triplitSchema,
     validationSchema,
     roles,
+    jsonTriplitSchema,
   };
 }
 

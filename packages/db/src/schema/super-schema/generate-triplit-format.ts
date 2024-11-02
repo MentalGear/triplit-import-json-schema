@@ -100,11 +100,11 @@ function getIdsInTriplitFormat(idObj: Record<string, any>) {
 // ========================================================================
 
 export function generateTriplitJson(
-  allTriplitJsonSchemas: Record<string, any>
+  allJsonTriplitSchemas: Record<string, any>
 ) {
   return {
     version: 0,
-    collections: allTriplitJsonSchemas,
+    collections: allJsonTriplitSchemas,
   };
 }
 

@@ -20,7 +20,7 @@ describe('Super Schema Artifacts', () => {
 
     expect(output).toHaveProperty('roles');
     expect(output).toHaveProperty('validationSchema');
-    expect(output).toHaveProperty('triplitJsonSchema');
+    expect(output).toHaveProperty('jsonTriplitSchema');
   });
 
   test('all output properties are present, even if roles are not defined', () => {
@@ -31,7 +31,7 @@ describe('Super Schema Artifacts', () => {
 
     expect(output).toHaveProperty('roles');
     expect(output).toHaveProperty('validationSchema');
-    expect(output).toHaveProperty('triplitJsonSchema');
+    expect(output).toHaveProperty('jsonTriplitSchema');
   });
 
   test('has expected roles', () => {
@@ -64,7 +64,7 @@ describe('Super Schema Artifacts', () => {
     const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
     // debugger;
     expect(
-      output.triplitJsonSchema.collections.exampleCollection.schema.properties
+      output.jsonTriplitSchema.collections.exampleCollection.schema.properties
         ?.relation
     ).toEqual({
       type: 'query',
@@ -81,7 +81,7 @@ describe('Super Schema Artifacts', () => {
     const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
 
     expect(
-      output.triplitJsonSchema?.collections?.exampleCollection.permissions
+      output.jsonTriplitSchema?.collections?.exampleCollection.permissions
     ).toEqual({
       admin: {
         insert: {
@@ -101,7 +101,7 @@ describe('Super Schema Artifacts', () => {
   test('has expected output', () => {
     const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
 
-    expect(output.triplitJsonSchema).toEqual({
+    expect(output.jsonTriplitSchema).toEqual({
       collections: {
         exampleCollection: {
           permissions: {
@@ -340,7 +340,7 @@ describe('Integration tests', () => {
       // const output = processSuperSchema(idTestSchema, zodAdapter);
       const output = processSuperSchema(superSchemaFlatZodValid, zodAdapter);
 
-      const triplitSchemaJSONGenerated = output.triplitJsonSchema;
+      const triplitSchemaJSONGenerated = output.jsonTriplitSchema;
 
       const triplitSchemaJsObject = JSONToSchema(triplitSchemaJSONGenerated);
 
@@ -380,7 +380,7 @@ describe('Integration tests', () => {
       // debugger;
       const output = processSuperSchema(superSchemaComplexZodValid, zodAdapter);
 
-      const triplitSchemaJSONGenerated = output.triplitJsonSchema;
+      const triplitSchemaJSONGenerated = output.jsonTriplitSchema;
 
       const triplitSchemaJsObject = JSONToSchema(triplitSchemaJSONGenerated);
 

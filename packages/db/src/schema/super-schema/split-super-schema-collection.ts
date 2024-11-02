@@ -68,7 +68,9 @@ export function splitSuperSchemaCollection(
       if (Object.keys(validationObj)?.length > 0)
         validations[key] = validationObj;
       if (Object.keys(relationObj)?.length > 0) relations[key] = relationObj;
-      if (Object.keys(unknownsObj)?.length > 0) unknowns[key] = unknownsObj;
+      if (Object.keys(unknownsObj)?.length > 0) {
+        unknowns[key] = unknownsObj;
+      }
       if (Object.keys(idsObj)?.length > 0) ids[key] = idsObj;
 
       continue;
