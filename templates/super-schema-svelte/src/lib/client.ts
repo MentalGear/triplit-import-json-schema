@@ -1,5 +1,4 @@
-import { TriplitClient } from '@triplit/client';
-import { schema } from '../../triplit/schema';
+import { TriplitClient, Schema as S, type ClientSchema } from '@triplit/client';
 import {
   PUBLIC_TRIPLIT_SERVER_URL,
   PUBLIC_TRIPLIT_TOKEN,
@@ -17,11 +16,21 @@ import { browser } from '$app/environment';
 //
 // Without the serverUrl or token, the client will operate in
 // offline mode
+import { processSuperSchema, zodAdapter } from '@triplit/db';
+import { schema, superSchemaCollections } from '../../triplit/schema';
 
+const result = processSuperSchema(superSchemaCollections, zodAdapter);
+
+const triplitSchema = result.triplitSchema.collections satisfies ClientSchema;
+// console.log(triplitSchema);
 export const triplit = new TriplitClient({
   storage: 'memory',
-  schema,
+  schema: schema,
   serverUrl: PUBLIC_TRIPLIT_SERVER_URL,
   token: PUBLIC_TRIPLIT_TOKEN,
   autoConnect: browser,
 });
+// console.log('client', triplit);
+
+// export const validationSchema = result.validationSchema;
+// console.log('hi', validationSchema);

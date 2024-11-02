@@ -32,7 +32,9 @@
   },
   "type": "module",
   "dependencies": {
-    "@triplit/client": "latest",
-    "@triplit/svelte": "latest"
+    "@triplit/client": "workspace:^",
+    "@triplit/db": "workspace:^",
+    "@triplit/svelte": "latest",
+    "zod": "^3.23.8"
   }
 }
