@@ -1,12 +1,12 @@
 import { JSONSchema7 } from 'json-schema';
 import { invertTransformations } from './invert-transform-functions.js';
 import { CollectionDefinition, SchemaDefinition } from '@triplit/db';
-
+import { RolePermissions } from '../../types/models.js';
 import { JSONToSchema } from '../../schema.js';
 
-const Ajv = require('ajv');
-const addFormats = require('ajv-formats');
-import { RolePermissions } from '../../types/models.js';
+import { Ajv } from 'ajv';
+import _addFormats from 'ajv-formats';
+const addFormats = _addFormats as unknown as typeof _addFormats.default;
 
 const ajv = new Ajv({
   // options
