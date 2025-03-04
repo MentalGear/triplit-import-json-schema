@@ -116,56 +116,66 @@ const roles = {
 
 export const superSchemaCollections: SuperSchema = {
   collections: {
-    lists: {
+    // collections wrapper needed meanwhile
+    todos: {
       schema: {
         id: 'nanoid',
         name: z.string().default('New NOC List'),
-        date: z.date(),
-
-        character: z.string(),
-        // Triplit-only types
-        relation: S.RelationMany('listItem', '$id_new'),
-      },
-    },
-
-    characters: {
-      schema: {
-        id: 'nanoid',
-        nameFirst: z.string(),
-        nameLast: z.string(),
-        catchphrase: z.set(z.string().max(200)),
-        email: z.string().email(),
-        isActive: z.boolean(),
-        isRoque: z.boolean(),
-
-        media: S.RelationById('linkedCollection', '$root_node_id'),
-      },
-
-      // permissions: {
-      //   admin: {
-      //     insert: {
-      //       // Allow all inserts
-      //       filter: [true],
-      //     },
-      //   },
-      //   user: {
-      //     insert: {
-      //       // Allow inserts where authorId is the user's id
-      //       filter: [['authorId', '=', '$role.userId']],
-      //     },
-      //   },
-      // },
-    },
-
-    media: {
-      schema: {
-        id: 'nanoid',
-        name: z.string(),
-        release: z.date(),
-        rating: z.number().min(0).max(10).int(),
+        completed: z.boolean().default(false),
+        created_at: z.date(),
       },
     },
   },
+
+  // lists: {
+  //   schema: {
+  //     id: 'nanoid',
+  //     name: z.string().default('New NOC List'),
+  //     date: z.date(),
+
+  //     character: z.string(),
+  //     // Triplit-only types
+  //     relation: S.RelationMany('listItem', '$id'),
+  //   },
+  // },
+
+  // characters: {
+  //   schema: {
+  //     id: 'nanoid',
+  //     nameFirst: z.string(),
+  //     nameLast: z.string(),
+  //     catchphrase: z.set(z.string().max(200)),
+  //     email: z.string().email(),
+  //     isActive: z.boolean(),
+  //     isRoque: z.boolean(),
+
+  //     // media: S.RelationById('linkedCollection', '$root_node_id'),
+  //   },
+
+  //   // permissions: {
+  //   //   admin: {
+  //   //     insert: {
+  //   //       // Allow all inserts
+  //   //       filter: [true],
+  //   //     },
+  //   //   },
+  //   //   user: {
+  //   //     insert: {
+  //   //       // Allow inserts where authorId is the user's id
+  //   //       filter: [['authorId', '=', '$role.userId']],
+  //   //     },
+  //   //   },
+  //   // },
+  // },
+
+  // media: {
+  //   schema: {
+  //     id: 'nanoid',
+  //     name: z.string(),
+  //     release: z.date(),
+  //     rating: z.number().min(0).max(10).int(),
+  //   },
+  // },
 };
 
 // TODO: type infer

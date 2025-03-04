@@ -11,10 +11,10 @@
     triplit.query('todos').order('created_at', 'DESC'),
   );
 </script>
-  <GettingStarted />
+
+<GettingStarted />
 
 <div class="main-container">
-  
   <div class="app-container">
     <h1>Structured Items List</h1>
     <ConnectionStatus />

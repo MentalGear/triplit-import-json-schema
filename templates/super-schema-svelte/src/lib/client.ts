@@ -19,13 +19,14 @@ import { browser } from '$app/environment';
 import { processSuperSchema, zodAdapter } from '@triplit/db';
 import { schema, superSchemaCollections } from '../../triplit/schema';
 
+// debugger;
 const result = processSuperSchema(superSchemaCollections, zodAdapter);
-
 const triplitSchema = result.triplitSchema.collections satisfies ClientSchema;
 // console.log(triplitSchema);
+
 export const triplit = new TriplitClient({
   storage: 'memory',
-  schema: schema,
+  schema: triplitSchema,
   serverUrl: PUBLIC_TRIPLIT_SERVER_URL,
   token: PUBLIC_TRIPLIT_TOKEN,
   autoConnect: browser,
