@@ -1,3 +1,9 @@
+# SuperSchema
+
+This PR adds an optional super-set for Schema that allows generating the triplit & data validation schema from a single source of truth.
+
+The schema can be defined by zod (or other validation libraries) and aonly requires a small (about 40 LOCs) adapter per library.
+
 ![Triplit banner](https://www.triplit.dev/opengraph-image.png)
 
 # Overview
