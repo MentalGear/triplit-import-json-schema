@@ -22,6 +22,7 @@ import {
   InvalidWhereClauseError,
   genToArr,
   DurableClock,
+  SessionVariableNotFoundError,
 } from '../src';
 import { hashSchemaJSON } from '../src/schema/schema.js';
 import { Models } from '../src/schema/types';
@@ -1666,6 +1667,7 @@ describe('database transactions', () => {
       });
       expect(insertSpy).not.toHaveBeenCalled();
     });
+    await pause(10);
     expect(insertSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -4757,10 +4759,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'many',
         // },
       ])
-      .include('posts', {
-        subquery: db.query('posts').where('author_id', '=', '$id').build(),
-        cardinality: 'many',
-      })
+      .subquery(
+        'posts',
+        db.query('posts').where('author_id', '=', '$id').build(),
+        'many'
+      )
       .build();
     const result = await db.fetch(query);
 
@@ -4805,21 +4808,20 @@ describe('selecting subqueries', () => {
         //   cardinality: 'many',
         // },
       ])
-      .include('posts', {
-        subquery: db
+      .subquery(
+        'posts',
+        db
           .query('posts')
           .where('author_id', '=', '$id')
           .select(['id'])
-          .include('likedBy', {
-            subquery: db
-              .query('users')
-              .where('liked_post_ids', '=', '$id')
-              .build(),
-            cardinality: 'many',
-          })
+          .subquery(
+            'likedBy',
+            db.query('users').where('liked_post_ids', '=', '$id').build(),
+            'many'
+          )
           .build(),
-        cardinality: 'many',
-      })
+        'many'
+      )
       .build();
     const result = await db.fetch(query);
     expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
@@ -4851,10 +4853,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'many',
         // },
       ])
-      .include('posts', {
-        subquery: db.query('posts').where('author_id', '=', '$id').build(),
-        cardinality: 'many',
-      })
+      .subquery(
+        'posts',
+        db.query('posts').where('author_id', '=', '$id').build(),
+        'many'
+      )
       .build();
     await testSubscription(db, query, [
       {
@@ -4919,10 +4922,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'one',
         // },
       ])
-      .include('favoritePost', {
-        subquery: db.query('posts').where('author_id', '=', '$id').build(),
-        cardinality: 'one',
-      })
+      .subquery(
+        'favoritePost',
+        db.query('posts').where('author_id', '=', '$id').build(),
+        'one'
+      )
       .build();
     const result = await db.fetch(query);
     expect(result.find((e) => e.id === 'user-1')).toHaveProperty(
@@ -4950,10 +4954,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'one',
         // },
       ])
-      .include('favoritePost', {
-        subquery: db.query('posts').where('author_id', '=', 'george').build(),
-        cardinality: 'one',
-      })
+      .subquery(
+        'favoritePost',
+        db.query('posts').where('author_id', '=', 'george').build(),
+        'one'
+      )
       .build();
     const result = await db.fetch(query);
     expect(result.find((e) => e.id === 'user-1')).toHaveProperty(
@@ -5204,9 +5209,10 @@ describe('selecting subqueries from schema', () => {
   });
 
   it('skipRules option should skip rules for subqueries', async () => {
-    const query = db.query('users').include('posts').build();
+    const userDb = db.withSessionVars({ USER_ID: 'irrelevant-user' });
+    const query = userDb.query('users').include('posts').build();
     {
-      const results = await db.fetch(query, { skipRules: false });
+      const results = await userDb.fetch(query, { skipRules: false });
       expect([...results.values()].map((user) => user.posts)).toMatchObject([
         new Map(),
         new Map(),
@@ -5214,7 +5220,7 @@ describe('selecting subqueries from schema', () => {
       ]);
     }
 
-    const results = await db.fetch(query, {
+    const results = await userDb.fetch(query, {
       skipRules: true,
     });
     expect(results).toHaveLength(3);
@@ -5361,7 +5367,11 @@ describe('db.clear()', () => {
 
     const originalMetadata = JSON.parse(
       JSON.stringify(
-        await genToArr(db.tripleStore.tupleStore.scan({ prefix: ['metadata'] }))
+        (
+          await genToArr(
+            db.tripleStore.tupleStore.scan({ prefix: ['metadata'] })
+          )
+        ).filter((t) => t.key[1] !== 'clock')
       )
     );
 
@@ -5383,9 +5393,9 @@ describe('db.clear()', () => {
       const schema = await db.getSchema();
       expect(schema).not.toEqual(undefined);
 
-      const metadataTuples = await genToArr(
-        db.tripleStore.tupleStore.scan({ prefix: ['metadata'] })
-      );
+      const metadataTuples = (
+        await genToArr(db.tripleStore.tupleStore.scan({ prefix: ['metadata'] }))
+      ).filter((t) => t.key[1] !== 'clock');
       expect(metadataTuples).toEqual(originalMetadata);
     }
   });
@@ -5590,6 +5600,15 @@ describe('variable conflicts', () => {
         expect(result.length).toBe(7);
       }
     }
+  });
+
+  it('Will throw an error if a variable is referenced that does not exist', async () => {
+    const db = baseDB.withSessionVars({ name: 'MATH101' });
+    await expect(
+      db.fetch(
+        db.query('classes').where(['name', '=', '$session.$name']).build()
+      )
+    ).rejects.toThrow(SessionVariableNotFoundError);
   });
 
   it('can access a nested data and record types via a variable', async () => {
@@ -5871,5 +5890,167 @@ describe('variable conflicts', () => {
         });
       }
     });
+  });
+});
+
+describe('cyclical permissions', () => {
+  const schema: Models = {
+    users: {
+      schema: S.Schema({
+        id: S.Id(),
+      }),
+    },
+    events: {
+      schema: S.Schema({
+        id: S.Id(),
+        attendees: S.RelationMany('eventAttendees', {
+          where: [['eventId', '=', '$id']],
+        }),
+      }),
+      permissions: {
+        user: {
+          read: {
+            // Can see events that they are attending
+            filter: [['attendees.userId', '=', '$role.user_id']],
+          },
+        },
+      },
+    },
+    eventAttendees: {
+      schema: S.Schema({
+        id: S.Id(),
+        eventId: S.String(),
+        event: S.RelationById('events', '$eventId'),
+        userId: S.String(),
+        user: S.RelationById('users', '$userId'),
+      }),
+      permissions: {
+        user: {
+          read: {
+            // Can see event attendees of events that they are attending
+            filter: [['event.attendees.userId', '=', '$role.user_id']],
+          },
+        },
+      },
+    },
+  };
+
+  const db = new DB({
+    schema: {
+      roles: {
+        user: {
+          match: {
+            role: 'user',
+            userId: '$user_id',
+          },
+        },
+      },
+      collections: schema,
+      version: 0,
+    },
+  });
+
+  beforeAll(async () => {
+    await db.insert('users', { id: '1' }, { skipRules: true });
+    await db.insert('users', { id: '2' }, { skipRules: true });
+    await db.insert('users', { id: '3' }, { skipRules: true });
+    await db.insert('users', { id: '4' }, { skipRules: true });
+    await db.insert('events', { id: '1' }, { skipRules: true });
+    await db.insert('events', { id: '2' }, { skipRules: true });
+    await db.insert(
+      'eventAttendees',
+      { id: '1', eventId: '1', userId: '1' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '2', eventId: '1', userId: '2' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '3', eventId: '2', userId: '1' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '4', eventId: '2', userId: '3' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '5', eventId: '2', userId: '4' },
+      { skipRules: true }
+    );
+  });
+  const user1Session = db.withSessionVars({
+    role: 'user',
+    userId: '1',
+  });
+  const user2Session = db.withSessionVars({
+    role: 'user',
+    userId: '2',
+  });
+
+  it('can query events that a user is attending', async () => {
+    {
+      const result = await user1Session.fetch(db.query('events').build());
+      expect(result.length).toBe(2);
+      expect(result).toEqual([{ id: '1' }, { id: '2' }]);
+    }
+    {
+      const result = await user2Session.fetch(db.query('events').build());
+      expect(result.length).toBe(1);
+      expect(result).toEqual([{ id: '1' }]);
+    }
+  });
+  it('can query mutual attendees', async () => {
+    {
+      const result = await user1Session.fetch(
+        db.query('eventAttendees').build()
+      );
+      expect(result.length).toBe(5);
+    }
+    {
+      const result = await user2Session.fetch(
+        db.query('eventAttendees').build()
+      );
+      expect(result.length).toBe(2);
+    }
+  });
+});
+
+it('test relation with nested fk', async () => {
+  const schema = {
+    a: {
+      schema: S.Schema({
+        id: S.Id(),
+        record: S.Record({
+          bId: S.String(),
+        }),
+        // Test no scope
+        b1: S.RelationById('b', '$record.bId'),
+        // Test with scope
+        b2: S.RelationById('b', '$1.record.bId'),
+      }),
+    },
+    b: {
+      schema: S.Schema({
+        id: S.Id(),
+      }),
+    },
+  };
+  const db = new DB({ schema: { collections: schema } });
+  await db.insert('b', { id: 'b-1' });
+  await db.insert('a', { id: 'a-1', record: { bId: 'b-1' } });
+
+  const result = await db.fetchOne(
+    db.query('a').include('b1').include('b2').build()
+  );
+  expect(result).toEqual({
+    id: 'a-1',
+    record: { bId: 'b-1' },
+    b1: { id: 'b-1' },
+    b2: { id: 'b-1' },
   });
 });

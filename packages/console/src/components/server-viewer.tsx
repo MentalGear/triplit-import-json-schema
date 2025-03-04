@@ -49,7 +49,7 @@ export async function loader({ params }: { params: { serverHost?: string } }) {
   const serverHost =
     slugServerHost === 'local'
       ? DEFAULT_HOST
-      : importedServerHost ?? slugServerHost;
+      : (importedServerHost ?? slugServerHost);
   if (!serverHost) return redirect('/');
   const server = await consoleClient.fetchOne(
     consoleClient.query('servers').id(serverHost).include('tokens').build()
@@ -180,15 +180,14 @@ export function ServerViewer({
         }[];
       };
       failures.forEach(({ error, txId }) => {
-        if (error.name === 'WritePermissionError') {
-          toast({
-            title: `WritePermissionError`,
-            description:
-              error.message +
-              ' Use the Service key to bypass all permission checks.',
-            variant: 'destructive',
-          });
-        }
+        toast({
+          title: error.name,
+          description:
+            error.message + error.name === 'WritePermissionError'
+              ? ' Use the Service key to bypass all permission checks.'
+              : '',
+          variant: 'destructive',
+        });
         client.rollback(txId);
       });
     });
@@ -213,10 +212,13 @@ export function ServerViewer({
     : collectionStats.map(({ collection }) => collection);
 
   const statsByCollection = useMemo(() => {
-    return collectionStats.reduce((acc, { collection, numEntities }) => {
-      acc[collection] = { numEntities };
-      return acc;
-    }, {} as Record<string, { numEntities: number }>);
+    return collectionStats.reduce(
+      (acc, { collection, numEntities }) => {
+        acc[collection] = { numEntities };
+        return acc;
+      },
+      {} as Record<string, { numEntities: number }>
+    );
   }, [collectionStats]);
 
   const selectedCollectionStats = statsByCollection[query.collection];
@@ -277,14 +279,14 @@ export function ServerViewer({
                   updateClientOptions({ token: value });
                   // setClient(overwriteClient(value, client));
                 }}
-                variant={isSelectedToken ? 'default' : 'ghost'}
+                variant={isSelectedToken ? 'secondary' : 'ghost'}
                 className={`group truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
               >
                 <KeyRound
-                  className="shrink-0 hidden md:inline-block"
-                  size={20}
+                  className="shrink-0 hidden md:inline-block ml-1"
+                  size={16}
                 />
-                <span className="text-xs md:text-sm truncate w-full">{`${name}`}</span>
+                <span className="text-xs md:text-sm truncate w-full text-left">{`${name}`}</span>
                 {!isServiceToken && (
                   <DropdownMenu>
                     <DropdownMenuTrigger
@@ -378,7 +380,7 @@ export function ServerViewer({
               onClick={() => {
                 setQuery({ collection }, false);
               }}
-              variant={query.collection === collection ? 'default' : 'ghost'}
+              variant={query.collection === collection ? 'secondary' : 'ghost'}
               className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
             >
               <GridFour

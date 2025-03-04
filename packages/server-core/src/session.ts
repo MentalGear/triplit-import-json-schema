@@ -8,6 +8,8 @@ import {
   appendCollectionToId,
   EntityId,
   JSONToSchema,
+  Models,
+  Model,
 } from '@triplit/db';
 import { RouteNotFoundError, ServiceKeyRequiredError } from './errors.js';
 import { isTriplitError } from './utils.js';
@@ -16,12 +18,6 @@ import { ProjectJWT } from './token.js';
 import { genToArr } from '@triplit/db';
 import { SyncConnection } from './sync-connection.js';
 import { WebhookJSONDefinition } from './webhooks-manager.js';
-
-export interface ConnectionOptions {
-  clientId: string;
-  clientSchemaHash: number | undefined;
-  syncSchema?: boolean | undefined;
-}
 
 export function isChunkedMessageComplete(message: string[], total: number) {
   if (message.length !== total) return false;
@@ -59,15 +55,14 @@ export function hasAdminAccess(token: ProjectJWT) {
 
 export class Session {
   db: TriplitDB<any>;
-  constructor(public server: TriplitServer, public token: ProjectJWT) {
+  constructor(
+    public server: TriplitServer,
+    public token: ProjectJWT
+  ) {
     if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
 
     this.db = server.db.withSessionVars(token);
-  }
-
-  createConnection(connectionParams: ConnectionOptions) {
-    return new SyncConnection(this, connectionParams);
   }
 
   // TODO: ensure data that we store in memory is invalidated when the db is "cleared"
@@ -118,9 +113,17 @@ export class Session {
     // TODO: better message (maybe error about invalid parameters?)
     return ServerResponse(400, new TriplitError('Invalid format').toJSON());
   }
-  async overrideSchema(params: { schema: any }) {
+  async overrideSchema(
+    params: { schema: any } & Parameters<
+      typeof TriplitDB.prototype.overrideSchema
+    >[1]
+  ) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
-    const result = await this.db.overrideSchema(JSONToSchema(params.schema));
+    const { schema, ...options } = params;
+    const result = await this.db.overrideSchema(
+      JSONToSchema(params.schema),
+      options
+    );
     return ServerResponse(result.successful ? 200 : 409, result);
   }
 
@@ -160,7 +163,8 @@ export class Session {
       const collectionSchema = schema?.[collectionName]?.schema;
       const data = result.map((entity) => {
         const jsonEntity = collectionSchema
-          ? collectionSchema.convertJSToJSON(entity, schema)
+          ? // Based on select, you may not have a full entity
+            convertPartialToJSON(entity, collectionSchema, schema)
           : entity;
         const entityId = jsonEntity.id;
         if (hasSelectWithoutId && jsonEntity.id) {
@@ -325,6 +329,24 @@ export class Session {
     }
   }
 
+  async deleteAll(collectionName: string) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      const txResult = await this.db.transact(async (tx) => {
+        const allEntities = await tx.fetch({ collectionName, select: ['id'] });
+        for (const entity of allEntities) {
+          // @ts-expect-error
+          await tx.delete(collectionName, entity.id);
+        }
+      });
+      return ServerResponse(200, txResult);
+    } catch (e) {
+      return this.errorResponse(e, {
+        fallbackMessage: `Could not delete all entities in '${collectionName}'. An unknown error occurred.`,
+      });
+    }
+  }
+
   errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
     if (isTriplitError(e)) {
       return ServerResponse(e.status, e.toJSON());
@@ -374,6 +396,20 @@ export class Session {
       });
     }
   }
+}
+
+// A query result may be partial due to select
+function convertPartialToJSON<T>(
+  partial: any,
+  collectionSchema: Model,
+  schema: Models
+): any {
+  return Object.fromEntries(
+    Object.entries(partial).map(([k, v]) => {
+      const propDef = collectionSchema.properties[k];
+      return [k, propDef ? propDef.convertJSToJSON(v, schema) : v];
+    })
+  );
 }
 
 export function throttle(callback: () => void, delay: number) {

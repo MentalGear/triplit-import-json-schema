@@ -140,10 +140,19 @@ export class InvalidFilterError extends TriplitError {
 }
 
 export class SessionVariableNotFoundError extends TriplitError {
-  constructor(variableName: string, ...args: any[]) {
+  constructor(
+    variableName: string,
+    scope: string,
+    allVars: Record<string, any>,
+    ...args: any[]
+  ) {
     super(...args);
     this.name = 'SessionVariableNotFoundError';
-    this.baseMessage = `${variableName} could not be found in the provided variables for this query.`;
+    this.baseMessage = `\'${variableName}\' could not be found in the variables for this query. The available $${scope} variables are: ${Object.keys(
+      allVars
+    )
+      .map((v) => `\'$${scope}.${v}\'`)
+      .join(', ')}`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -319,8 +328,8 @@ export class WritePermissionError extends TriplitError {
       operation === 'insert'
         ? 'insertion'
         : operation === 'delete'
-        ? 'deletion'
-        : 'update'
+          ? 'deletion'
+          : 'update'
     } of the entity with id '${entityId}'. The provided session roles were [${sessionRoles
       .map((m) => m.key)
       .join(', ')}].`;

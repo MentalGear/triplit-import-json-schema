@@ -1,5 +1,139 @@
 # @triplit/angular
 
+## 0.1.35
+
+### Patch Changes
+
+- Updated dependencies [70ea2813]
+  - @triplit/client@0.6.15
+
+## 0.1.34
+
+### Patch Changes
+
+- @triplit/client@0.6.14
+
+## 0.1.33
+
+### Patch Changes
+
+- @triplit/client@0.6.13
+
+## 0.1.32
+
+### Patch Changes
+
+- @triplit/client@0.6.12
+
+## 0.1.31
+
+### Patch Changes
+
+- @triplit/client@0.6.11
+
+## 0.1.30
+
+### Patch Changes
+
+- @triplit/client@0.6.10
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies [4ccc6422]
+  - @triplit/client@0.6.9
+
+## 0.1.28
+
+### Patch Changes
+
+- @triplit/client@0.6.8
+
+## 0.1.27
+
+### Patch Changes
+
+- @triplit/client@0.6.7
+
+## 0.1.26
+
+### Patch Changes
+
+- @triplit/client@0.6.6
+
+## 0.1.25
+
+### Patch Changes
+
+- @triplit/client@0.6.5
+
+## 0.1.24
+
+### Patch Changes
+
+- Updated dependencies [6de9aaf4]
+  - @triplit/client@0.6.4
+
+## 0.1.23
+
+### Patch Changes
+
+- Updated dependencies [483c84b6]
+  - @triplit/client@0.6.3
+
+## 0.1.22
+
+### Patch Changes
+
+- Updated dependencies [2541c6e2]
+  - @triplit/client@0.6.2
+
+## 0.1.21
+
+### Patch Changes
+
+- @triplit/client@0.6.1
+
+## 0.1.20
+
+### Patch Changes
+
+- Updated dependencies [2713ca43]
+  - @triplit/client@0.6.0
+
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [f1ce9675]
+  - @triplit/client@0.5.17
+
+## 0.1.18
+
+### Patch Changes
+
+- @triplit/client@0.5.16
+
+## 0.1.17
+
+### Patch Changes
+
+- @triplit/client@0.5.15
+
+## 0.1.16
+
+### Patch Changes
+
+- @triplit/client@0.5.14
+
+## 0.1.15
+
+### Patch Changes
+
+- Updated dependencies [bdd50e7f]
+  - @triplit/client@0.5.13
+
 ## 0.1.14
 
 ### Patch Changes

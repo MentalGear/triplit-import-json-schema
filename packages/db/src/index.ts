@@ -38,16 +38,7 @@ export {
   RelationBuilder,
   relationBuilder,
 } from './query/builder.js';
-export {
-  stripCollectionFromId,
-  appendCollectionToId,
-  logSchemaChangeViolations,
-  getVariableComponents,
-  isValueVariable,
-  replaceVariablesInFilterStatements,
-  replaceVariable,
-  splitIdParts,
-} from './db-helpers.js';
+export * from './db-helpers.js';
 export type {
   TripleRow,
   EntityId,
@@ -60,11 +51,13 @@ export {
   JSONToSchema,
   hashSchemaJSON,
   getSchemaFromPath,
+  getDefaultValuesForCollection,
 } from './schema/schema.js';
 export {
   getRolesFromSession,
   normalizeSessionVars,
   getCollectionPermissions,
+  sessionRolesAreEquivalent,
 } from './schema/permissions.js';
 export { Schema } from './schema/builder.js';
 export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
@@ -93,6 +86,9 @@ export * from './data-types/constants.js';
 export * from './schema/export/index.js';
 export * from './schema/import/index.js';
 export * from './utils/generator.js';
+
+export * from './utils/query.js';
+export * from './query/execution-cache.js';
 
 // Super Schema Exports
 export { processSuperSchema } from './schema/super-schema/process-super-schema.js';

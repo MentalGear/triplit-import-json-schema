@@ -2,6 +2,7 @@ import * as ComLink from 'comlink';
 import type {
   TriplitClient as Client,
   ClientOptions,
+  SimpleClientStorageOptions,
 } from '../client/triplit-client.js';
 import {
   ChangeTracker,
@@ -85,8 +86,9 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     {} as any;
   private _connectionStatus: ConnectionStatus;
   constructor(
-    options?: ClientOptions<M> & {
+    options?: Omit<ClientOptions<M>, 'storage'> & {
       workerUrl?: string;
+      storage?: SimpleClientStorageOptions;
     },
     workerEndpoint?: ComLink.Endpoint,
     sharedWorkerPort?: MessagePort
@@ -96,11 +98,28 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
       sharedWorkerPort ??
       getTriplitWorkerEndpoint(options?.workerUrl);
     this.clientWorker = ComLink.wrap<Client<M>>(workerEndpoint);
-    const { schema } = options || {};
+    const {
+      schema,
+      onSessionError,
+      token,
+      refreshOptions,
+      autoConnect,
+      ...remainingOptions
+    } = options || {};
+    if (token) {
+      this.startSession(
+        token,
+        autoConnect,
+        refreshOptions && ComLink.proxy(refreshOptions)
+      );
+    }
+    if (onSessionError) {
+      this.onSessionError(onSessionError);
+    }
     // @ts-expect-error
     this.initialized = this.clientWorker.init(
       {
-        ...options,
+        ...remainingOptions,
         schema: schema && schemaToJSON({ collections: schema, version: 0 }),
       },
       ComLink.proxy(new WorkerLogger())
@@ -315,7 +334,7 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
       return this.clientWorker.subscribeBackground(
         // @ts-expect-error
         query,
-        options
+        ComLink.proxy(options)
       );
     })();
     return () => {
@@ -406,18 +425,32 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     return JSONToSchema(await this.clientWorker.getSchemaJson());
   }
 
-  async updateOptions(options: Pick<ClientOptions, 'token' | 'serverUrl'>) {
-    await this.initialized;
-    return this.clientWorker.updateOptions(options);
-  }
-  async updateToken(token?: string) {
-    await this.initialized;
-    return this.clientWorker.updateToken(token);
-  }
-
   async updateServerUrl(serverUrl: string) {
     await this.initialized;
     return this.clientWorker.updateServerUrl(serverUrl);
+  }
+
+  async startSession(...args: Parameters<Client<M>['startSession']>) {
+    await this.initialized;
+    if (args[2]) args[2] = ComLink.proxy(args[2]);
+    return this.clientWorker.startSession(...args);
+  }
+
+  async endSession(...args: Parameters<Client<M>['endSession']>) {
+    await this.initialized;
+    return this.clientWorker.endSession(...args);
+  }
+
+  async onSessionError(...args: Parameters<Client<M>['onSessionError']>) {
+    await this.initialized;
+    return this.clientWorker.onSessionError(ComLink.proxy(args[0]));
+  }
+
+  async updateSessionToken(
+    ...args: Parameters<Client<M>['updateSessionToken']>
+  ) {
+    await this.initialized;
+    return this.clientWorker.updateSessionToken(...args);
   }
 
   async isFirstTimeFetchingQuery(

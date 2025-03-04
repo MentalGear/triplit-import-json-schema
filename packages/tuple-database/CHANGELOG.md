@@ -1,5 +1,17 @@
 # @triplit/tuple-database
 
+## 2.2.33
+
+### Patch Changes
+
+- 1bcf734d: Allow memory storage to accept MIN / MAX values in scan params
+
+## 2.2.32
+
+### Patch Changes
+
+- 8f004df6: add bun server support
+
 ## 2.2.31
 
 ### Patch Changes

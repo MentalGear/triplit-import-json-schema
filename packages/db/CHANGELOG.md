@@ -1,5 +1,116 @@
 # @triplit/db
 
+## 0.5.21
+
+### Patch Changes
+
+- dcc536dc: Support record nested relational vars
+
+## 0.5.20
+
+### Patch Changes
+
+- 4ef05ec3: fixup typebox
+
+## 0.5.19
+
+### Patch Changes
+
+- 6d348d3d: Add `--failOnBackwardsIncompatibleChange` to @triplit/CLI `schema push` command
+
+## 0.5.18
+
+### Patch Changes
+
+- 398da292: adjust schema diffing for relations and speed up data validation
+
+## 0.5.17
+
+### Patch Changes
+
+- a80dbe04: add additional checks to schema diffs
+
+## 0.5.16
+
+### Patch Changes
+
+- 4ccc6422: upgrade @sinclair/typebox
+
+## 0.5.15
+
+### Patch Changes
+
+- f3186500: reset clock on any db reset
+- e5ff046f: export StringTypeOptions
+
+## 0.5.14
+
+### Patch Changes
+
+- b2b3eae5: use requery strategy for all triple subscription fetches
+
+## 0.5.13
+
+### Patch Changes
+
+- 7bbc8e53: ignore entity cache when state vector is present
+
+## 0.5.12
+
+### Patch Changes
+
+- bb973df7: Use new, efficient refetching strategy for queries that reconnect with existing caches
+
+## 0.5.11
+
+### Patch Changes
+
+- 8e9511dc: fixup types and add tests for query builder order
+- a2532548: Fixup and test additional where() query builder cases
+
+## 0.5.10
+
+### Patch Changes
+
+- a0932216: bug fix for experimental entity cache
+- Updated dependencies [1bcf734d]
+  - @triplit/tuple-database@2.2.33
+
+## 0.5.9
+
+### Patch Changes
+
+- 2713ca43: export additional methods
+
+## 0.5.8
+
+### Patch Changes
+
+- bdebed22: Fix issue where $session scoped variables weren't working in sync queries
+- 7b1839b6: Apply filter groupings in delta triples calculations
+
+## 0.5.7
+
+### Patch Changes
+
+- 9107e262: Unify underlying storage subscription handlers for query subscriptions
+- 0cc53c85: export getDefaultValuesForCollection helper function
+- cb785390: fixup prepareQuery editing inmemory schema
+
+## 0.5.6
+
+### Patch Changes
+
+- dd8278d1: Fixup select: ['id'] query results
+
+## 0.5.5
+
+### Patch Changes
+
+- 8f004df6: add bun server support
+- Updated dependencies [8f004df6]
+  - @triplit/tuple-database@2.2.32
+
 ## 0.5.4
 
 ### Patch Changes

@@ -36,6 +36,7 @@ import { Logger } from '@triplit/types/logger';
 import { FetchResult } from './query/types/index.js';
 import { genToArr } from './utils/generator.js';
 import { COLLECTION_MARKER, OBJECT_MARKER } from './entity.js';
+import { ValuePointer } from '@sinclair/typebox/value';
 
 const ID_SEPARATOR = '#';
 
@@ -78,17 +79,18 @@ export function stripCollectionFromId(id: string): string {
 
 export function replaceVariablesInFilterStatements<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>,
   variables: Record<string, any>
 ): QueryWhere<M, CN> {
   return statements.map((filter) => {
-    if (isFilterGroup(filter))
+    if (isFilterGroup(filter)) {
       return {
         ...filter,
         filters: replaceVariablesInFilterStatements(filter.filters, variables),
       };
+    }
     if (isFilterStatement(filter)) {
       const replacedValue = replaceVariable(filter[2], variables);
       return [filter[0], filter[1], replacedValue];
@@ -110,26 +112,27 @@ export function replaceVariable(
     const path = key.split('.');
     let current = scopeVars;
     for (const part of path) {
+      current = current[part];
       if (current == null) {
         // Allow referential variables to be undefined
         if (varScopeType(scope) === 'relational') return undefined;
-        throw new SessionVariableNotFoundError(target);
+        throw new SessionVariableNotFoundError(target, scope, scopeVars);
       }
-      current = current[part];
     }
     return current;
   } else {
     // if no scope, allow missing variable
-    if (key in variables) return variables[key];
+    // if (key in variables) return variables[key];
     // console.warn(new SessionVariableNotFoundError(target));
     // throw new SessionVariableNotFoundError(target);
-    return undefined;
+    // return undefined;
+    return ValuePointer.Get(variables, '/' + key.split('.').join('/'));
   }
 }
 
 export function* filterStatementIterator<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>
 ): Generator<
@@ -149,7 +152,7 @@ export function* filterStatementIterator<
 
 export function someFilterStatements<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>,
   someFunction: (
@@ -186,7 +189,8 @@ export async function readSchemaFromTripleStore<M extends Models = Models>(
 
 export async function overrideStoredSchema<M extends Models>(
   db: DB<M>,
-  schema: StoreSchema<M> | undefined
+  schema: StoreSchema<M> | undefined,
+  { failOnBackwardsIncompatibleChange = false } = {}
 ): Promise<{
   successful: boolean;
   issues: PossibleDataViolations[];
@@ -203,6 +207,12 @@ export async function overrideStoredSchema<M extends Models>(
         if (diff.length === 0) return { successful: true, issues };
 
         issues = await getSchemaDiffIssues(tx, diff);
+
+        // TODO if `failOnBackwardsIncompatibleChange` is true, we should skip
+        // data checks for faster performance
+        if (failOnBackwardsIncompatibleChange && issues.length > 0) {
+          return { successful: false, issues };
+        }
         if (
           issues.length > 0 &&
           issues.some((issue) => issue.violatesExistingData)
@@ -242,41 +252,50 @@ export async function overrideStoredSchema<M extends Models>(
 export function logSchemaChangeViolations(
   successful: boolean,
   issues: PossibleDataViolations[],
-  logger?: Logger
+  {
+    logger,
+    forcePrintIssues = false,
+  }: { logger?: Logger; forcePrintIssues?: boolean } = {}
 ) {
-  const log = logger ?? console;
+  const log = logger ?? (console as unknown as Logger);
+  if (successful) {
+    log.info('Schema update successful');
+  } else {
+    log.error('Schema update failed. Please resolve the following issues:');
+  }
   const compatibleIssuesMessage = `Found ${issues.length} backwards incompatible schema changes.`;
   if (issues.length > 0) {
     log.warn(compatibleIssuesMessage);
   } else {
     log.info(compatibleIssuesMessage);
   }
-  if (successful) {
-    log.info('Schema update successful');
-  } else {
-    log.error('Schema update failed. Please resolve the following issues:');
+
+  if (!successful || forcePrintIssues) {
     const problematicIssues = issues.filter(
-      (issue) => issue.violatesExistingData
+      (issue) => forcePrintIssues || issue.violatesExistingData
     );
-    const collectionIssueMap = problematicIssues.reduce((acc, issue) => {
-      const collection = issue.context.collection;
-      const existingIssues = acc.get(collection) ?? [];
-      acc.set(collection, [...existingIssues, issue]);
-      return acc;
-    }, new Map<string, PossibleDataViolations[]>());
-    collectionIssueMap.forEach((issues, collection) => {
-      log.error(`\nCollection: '${collection}'`);
-      issues.forEach(({ issue, violatesExistingData, context, cure }) => {
-        if (!violatesExistingData) return;
-        log.error(
-          `\t'${context.attribute.join('.')}'
+    logSchemaIssues(log, problematicIssues);
+  }
+}
+
+function logSchemaIssues(logger: Logger, issues: PossibleDataViolations[]) {
+  const collectionIssueMap = issues.reduce((acc, issue) => {
+    const collection = issue.context.collection;
+    const existingIssues = acc.get(collection) ?? [];
+    acc.set(collection, [...existingIssues, issue]);
+    return acc;
+  }, new Map<string, PossibleDataViolations[]>());
+  collectionIssueMap.forEach((issues, collection) => {
+    logger.error(`\nCollection: '${collection}'`);
+    issues.forEach(({ issue, context, cure }) => {
+      logger.error(
+        `\t'${context.attribute.join('.')}'
 \t\tIssue: ${issue}
 \t\tFix:   ${cure}`
-        );
-      });
+      );
     });
-    log.info('');
-  }
+  });
+  logger.info('');
 }
 
 export function validateTriple(
@@ -334,7 +353,7 @@ export function validateTriple(
 
 export async function getCollectionSchema<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(tx: DB<M> | DBTransaction<M>, collectionName: CN) {
   const res = await tx.getSchema();
   const { collections } = res ?? {};
@@ -348,7 +367,7 @@ export async function getCollectionSchema<
 
 export function fetchResultToJS<
   M extends Models,
-  Q extends CollectionQuery<M, CollectionNameFromModels<M>>
+  Q extends CollectionQuery<M, CollectionNameFromModels<M>>,
 >(
   results: Map<string, FetchResultEntity<M, Q>>,
   schema: M | undefined,
@@ -360,7 +379,7 @@ export function fetchResultToJS<
 }
 
 export function isValueVariable(value: QueryValue): value is string {
-  return typeof value === 'string' && value.startsWith('$');
+  return typeof value === 'string' && value[0] === '$';
 }
 
 export function isValueReferentialVariable(value: QueryValue): value is string {
